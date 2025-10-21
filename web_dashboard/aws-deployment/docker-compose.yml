@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  web-dashboard:
+    build: .
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NODE_ENV=production
+      - PORT=80
+    volumes:
+      - ./logs:/var/log/nginx
+      - ./ssl:/etc/nginx/ssl
+    restart: unless-stopped
+    networks:
+      - surveillance-network
+
+  # Optional: Add a reverse proxy for better security
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - web-dashboard
+    restart: unless-stopped
+    networks:
+      - surveillance-network
+
+networks:
+  surveillance-network:
+    driver: bridge
+
+volumes:
+  logs:
+  ssl:

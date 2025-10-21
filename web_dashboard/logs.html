@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Logs - Surveillance Car</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-car"></i>
+            <span>Surveillance Car</span>
+        </div>
+        <div class="nav-menu">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="settings.html" class="nav-link">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="logs.html" class="nav-link active">
+                <i class="fas fa-file-alt"></i> Logs
+            </a>
+            <a href="map.html" class="nav-link">
+                <i class="fas fa-map"></i> Map
+            </a>
+            <a href="detections.html" class="nav-link">
+                <i class="fas fa-eye"></i> Detections
+            </a>
+        </div>
+        <div class="nav-status">
+            <div class="status-indicator" id="connectionStatus">
+                <i class="fas fa-wifi"></i>
+                <span>Connecting...</span>
+            </div>
+            <div class="status-indicator" id="batteryStatus">
+                <i class="fas fa-battery-full"></i>
+                <span>0%</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="logs-container">
+            <!-- Header -->
+            <div class="logs-header">
+                <h1><i class="fas fa-file-alt"></i> System Logs</h1>
+                <div class="logs-controls">
+                    <div class="control-group">
+                        <label for="logLevelFilter">Level:</label>
+                        <select id="logLevelFilter">
+                            <option value="all">All Levels</option>
+                            <option value="debug">Debug</option>
+                            <option value="info">Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="error">Error</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="logSourceFilter">Source:</label>
+                        <select id="logSourceFilter">
+                            <option value="all">All Sources</option>
+                            <option value="system">System</option>
+                            <option value="sensors">Sensors</option>
+                            <option value="camera">Camera</option>
+                            <option value="ai">AI</option>
+                            <option value="network">Network</option>
+                            <option value="storage">Storage</option>
+                            <option value="motor">Motor</option>
+                            <option value="audio">Audio</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="logSearchInput">Search:</label>
+                        <input type="text" id="logSearchInput" placeholder="Search logs...">
+                    </div>
+                    <div class="control-group">
+                        <label for="logDateStart">From:</label>
+                        <input type="datetime-local" id="logDateStart">
+                    </div>
+                    <div class="control-group">
+                        <label for="logDateEnd">To:</label>
+                        <input type="datetime-local" id="logDateEnd">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="logs-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalLogs">0</div>
+                        <div class="stat-label">Total Logs</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="errorLogs">0</div>
+                        <div class="stat-label">Errors</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="warningLogs">0</div>
+                        <div class="stat-label">Warnings</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon info">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="infoLogs">0</div>
+                        <div class="stat-label">Info</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="logs-toolbar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="logSearchInput" placeholder="Search logs...">
+                </div>
+                <div class="view-options">
+                    <label class="switch">
+                        <input type="checkbox" id="realTimeToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Real-time</span>
+                    <label class="switch">
+                        <input type="checkbox" id="autoScrollToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Auto-scroll</span>
+                    <select id="logViewToggle">
+                        <option value="list">List View</option>
+                        <option value="grid">Grid View</option>
+                        <option value="timeline">Timeline View</option>
+                    </select>
+                </div>
+                <div class="toolbar-actions">
+                    <button id="refreshLogsBtn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button id="exportLogsBtn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <button id="clearLogsBtn" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Logs Content -->
+            <div class="logs-content">
+                <div id="logsList" class="logs-list">
+                    <!-- Logs will be populated here -->
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="logs-pagination">
+                <button class="btn btn-secondary btn-sm" id="prevPageBtn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button class="btn btn-secondary btn-sm" id="nextPageBtn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Log Detail Modal -->
+    <div id="logDetailModal" class="modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div id="logDetailContent">
+                <!-- Log detail content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- API Status Modal -->
+    <div id="apiStatusModal" class="modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div id="apiStatusContent">
+                <!-- API status content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results Modal -->
+    <div id="testResultsModal" class="modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div id="testResultsContent">
+                <!-- Test results content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading logs...</p>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+    <script src="js/system-logs.js"></script>
+    <script src="js/api-monitor.js"></script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map - Surveillance Car</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/map.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.fullscreen@2.0.0/Control.FullScreen.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-car"></i>
+            <span>Surveillance Car</span>
+        </div>
+        <div class="nav-menu">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="settings.html" class="nav-link">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="logs.html" class="nav-link">
+                <i class="fas fa-file-alt"></i> Logs
+            </a>
+            <a href="map.html" class="nav-link active">
+                <i class="fas fa-map"></i> Map
+            </a>
+            <a href="detections.html" class="nav-link">
+                <i class="fas fa-eye"></i> Detections
+            </a>
+        </div>
+        <div class="nav-status">
+            <div class="status-indicator" id="connectionStatus">
+                <i class="fas fa-wifi"></i>
+                <span>Connecting...</span>
+            </div>
+            <div class="status-indicator" id="batteryStatus">
+                <i class="fas fa-battery-full"></i>
+                <span>0%</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="map-container">
+            <!-- Header -->
+            <div class="map-header">
+                <h1><i class="fas fa-map"></i> Interactive Map</h1>
+                <div class="map-controls">
+                    <div class="control-group">
+                        <label for="mapViewToggle">View:</label>
+                        <select id="mapViewToggle">
+                            <option value="street">Street</option>
+                            <option value="satellite">Satellite</option>
+                            <option value="terrain">Terrain</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            <input type="checkbox" id="showDetectionsToggle" checked>
+                            Show Detections
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            <input type="checkbox" id="showPatrolRouteToggle" checked>
+                            Show Patrol Route
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Controls Panel -->
+            <div class="map-controls-panel">
+                <div class="control-section">
+                    <h3><i class="fas fa-crosshairs"></i> Tracking</h3>
+                    <div class="control-buttons">
+                        <button id="startTrackingBtn" class="btn btn-success">
+                            <i class="fas fa-play"></i> Start Tracking
+                        </button>
+                        <button id="stopTrackingBtn" class="btn btn-danger" disabled>
+                            <i class="fas fa-stop"></i> Stop Tracking
+                        </button>
+                        <button id="clearMapBtn" class="btn btn-warning">
+                            <i class="fas fa-trash"></i> Clear Map
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3><i class="fas fa-route"></i> Patrol</h3>
+                    <div class="control-buttons">
+                        <button id="startPatrolBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Start Patrol
+                        </button>
+                        <button id="stopPatrolBtn" class="btn btn-danger" disabled>
+                            <i class="fas fa-stop"></i> Stop Patrol
+                        </button>
+                        <button id="addWaypointBtn" class="btn btn-secondary">
+                            <i class="fas fa-plus"></i> Add Waypoint
+                        </button>
+                        <button id="clearWaypointsBtn" class="btn btn-warning">
+                            <i class="fas fa-trash"></i> Clear Waypoints
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3><i class="fas fa-shield-alt"></i> Surveillance Zones</h3>
+                    <div class="control-buttons">
+                        <button id="addSurveillanceZoneBtn" class="btn btn-info">
+                            <i class="fas fa-plus"></i> Add Zone
+                        </button>
+                        <button id="clearSurveillanceZonesBtn" class="btn btn-warning">
+                            <i class="fas fa-trash"></i> Clear Zones
+                        </button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3><i class="fas fa-save"></i> Map Data</h3>
+                    <div class="control-buttons">
+                        <button id="saveMapBtn" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Map
+                        </button>
+                        <button id="loadMapBtn" class="btn btn-primary">
+                            <i class="fas fa-folder-open"></i> Load Map
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div id="surveillanceMap" class="surveillance-map">
+                <!-- Map will be rendered here -->
+            </div>
+
+            <!-- Map Info Panel -->
+            <div class="map-info-panel">
+                <div id="mapInfo">
+                    <!-- Map information will be populated here -->
+                </div>
+            </div>
+
+            <!-- Waypoints List -->
+            <div class="waypoints-panel">
+                <h3><i class="fas fa-map-marker-alt"></i> Waypoints</h3>
+                <div id="waypointsList" class="waypoints-list">
+                    <!-- Waypoints will be populated here -->
+                </div>
+            </div>
+
+            <!-- Surveillance Zones List -->
+            <div class="zones-panel">
+                <h3><i class="fas fa-shield-alt"></i> Surveillance Zones</h3>
+                <div id="zonesList" class="zones-list">
+                    <!-- Surveillance zones will be populated here -->
+                </div>
+            </div>
+
+            <!-- Detection History -->
+            <div class="detections-panel">
+                <h3><i class="fas fa-eye"></i> Recent Detections</h3>
+                <div id="detectionsList" class="detections-list">
+                    <!-- Recent detections will be populated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Map Legend -->
+    <div class="map-legend">
+        <h4>Map Legend</h4>
+        <div class="legend-items">
+            <div class="legend-item">
+                <i class="fas fa-car" style="color: #3498db;"></i>
+                <span>Surveillance Car</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-user" style="color: #e74c3c;"></i>
+                <span>Human Detection</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-paw" style="color: #f39c12;"></i>
+                <span>Animal Detection</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-car" style="color: #3498db;"></i>
+                <span>Vehicle Detection</span>
+            </div>
+            <div class="legend-item">
+                <i class="fas fa-cube" style="color: #95a5a6;"></i>
+                <span>Object Detection</span>
+            </div>
+            <div class="legend-item">
+                <span class="waypoint-number">1</span>
+                <span>Waypoint</span>
+            </div>
+            <div class="legend-item">
+                <div class="zone-indicator"></div>
+                <span>Surveillance Zone</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading map...</p>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="alertTitle">Alert</h3>
+            <p id="alertMessage">This is an alert message.</p>
+            <button id="alertOk" class="btn btn-primary">OK</button>
+        </div>
+    </div>
+
+    <!-- Zone Configuration Modal -->
+    <div id="zoneConfigModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Configure Surveillance Zone</h3>
+            <div class="form-group">
+                <label for="zoneName">Zone Name:</label>
+                <input type="text" id="zoneName" placeholder="Enter zone name">
+            </div>
+            <div class="form-group">
+                <label for="zoneType">Zone Type:</label>
+                <select id="zoneType">
+                    <option value="circle">Circle</option>
+                    <option value="polygon">Polygon</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="zoneRadius">Radius (meters):</label>
+                <input type="number" id="zoneRadius" value="50" min="10" max="1000">
+            </div>
+            <div class="form-group">
+                <label for="zoneColor">Color:</label>
+                <input type="color" id="zoneColor" value="#f39c12">
+            </div>
+            <div class="form-actions">
+                <button id="saveZoneBtn" class="btn btn-primary">Save Zone</button>
+                <button id="cancelZoneBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+    <script src="js/interactive-map.js"></script>
+    <script src="js/firebase-integration.js"></script>
+</body>
+</html>

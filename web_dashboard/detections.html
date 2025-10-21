@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detections - Surveillance Car</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-car"></i>
+            <span>Surveillance Car</span>
+        </div>
+        <div class="nav-menu">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="settings.html" class="nav-link">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="logs.html" class="nav-link">
+                <i class="fas fa-file-alt"></i> Logs
+            </a>
+            <a href="map.html" class="nav-link">
+                <i class="fas fa-map"></i> Map
+            </a>
+            <a href="detections.html" class="nav-link active">
+                <i class="fas fa-eye"></i> Detections
+            </a>
+        </div>
+        <div class="nav-status">
+            <div class="status-indicator" id="connectionStatus">
+                <i class="fas fa-wifi"></i>
+                <span>Connecting...</span>
+            </div>
+            <div class="status-indicator" id="batteryStatus">
+                <i class="fas fa-battery-full"></i>
+                <span>0%</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="detections-container">
+            <!-- Header -->
+            <div class="detections-header">
+                <h1><i class="fas fa-eye"></i> Detection History</h1>
+                <div class="detections-controls">
+                    <div class="control-group">
+                        <label for="detectionTypeFilter">Type:</label>
+                        <select id="detectionTypeFilter">
+                            <option value="all">All Types</option>
+                            <option value="human">Human</option>
+                            <option value="animal">Animal</option>
+                            <option value="vehicle">Vehicle</option>
+                            <option value="object">Object</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="detectionDateFilter">Date:</label>
+                        <input type="date" id="detectionDateFilter">
+                    </div>
+                    <div class="control-group">
+                        <label for="detectionConfidenceFilter">Min Confidence:</label>
+                        <input type="range" id="detectionConfidenceFilter" min="0" max="100" value="50">
+                        <span id="confidenceFilterValue">50%</span>
+                    </div>
+                    <div class="control-group">
+                        <label>
+                            <input type="checkbox" id="showOnlyAlerts">
+                            Show Only Alerts
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="detections-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalDetections">0</div>
+                        <div class="stat-label">Total Detections</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon human">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="humanDetections">0</div>
+                        <div class="stat-label">Human Detections</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon animal">
+                        <i class="fas fa-paw"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="animalDetections">0</div>
+                        <div class="stat-label">Animal Detections</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon vehicle">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="vehicleDetections">0</div>
+                        <div class="stat-label">Vehicle Detections</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="detections-toolbar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="detectionSearchInput" placeholder="Search detections...">
+                </div>
+                <div class="view-options">
+                    <label class="switch">
+                        <input type="checkbox" id="realTimeDetections" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Real-time</span>
+                    <select id="detectionViewToggle">
+                        <option value="list">List View</option>
+                        <option value="grid">Grid View</option>
+                        <option value="timeline">Timeline View</option>
+                    </select>
+                </div>
+                <div class="toolbar-actions">
+                    <button id="refreshDetectionsBtn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button id="exportDetectionsBtn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <button id="clearDetectionsBtn" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Detections Content -->
+            <div class="detections-content">
+                <div id="detectionsList" class="detections-list">
+                    <!-- Detections will be populated here -->
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="detections-pagination">
+                <button class="btn btn-secondary btn-sm" id="prevPageBtn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button class="btn btn-secondary btn-sm" id="nextPageBtn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Detection Detail Modal -->
+    <div id="detectionDetailModal" class="modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div id="detectionDetailContent">
+                <!-- Detection detail content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Detection Image Modal -->
+    <div id="detectionImageModal" class="modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div id="detectionImageContent">
+                <!-- Detection image content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading detections...</p>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="alertTitle">Alert</h3>
+            <p id="alertMessage">This is an alert message.</p>
+            <button id="alertOk" class="btn btn-primary">OK</button>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+    <script src="js/system-logs.js"></script>
+    <script src="js/firebase-integration.js"></script>
+    <script src="js/detections.js"></script>
+</body>
+</html>

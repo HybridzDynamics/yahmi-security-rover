@@ -1,0 +1,264 @@
+/*
+ * Smart Surveillance Car - Main ESP32 Firmware
+ * 
+ * Features:
+ * - Autonomous and manual control modes
+ * - Real-time video streaming
+ * - Audio capture and playback
+ * - Obstacle detection and avoidance
+ * - Battery monitoring
+ * - WebSocket communication
+ * - Local storage capabilities
+ * 
+ * Hardware Requirements:
+ * - ESP32 development board
+ * - ESP32-CAM module
+ * - IR sensors (3x)
+ * - Ultrasonic sensor (HC-SR04)
+ * - Motor driver (L298N)
+ * - DC motors (2x)
+ * - Speaker and microphone
+ * - Battery and voltage divider
+ * - Optional: SD card module
+ * 
+ * Author: AI Assistant
+ * Version: 1.0
+ * Date: 2024
+ */
+
+#include "src/main.h"
+
+// Global system state
+SystemState systemState;
+WiFiManager wifiManager;
+WebSocketServer wsServer;
+RESTApi restApi;
+CameraStream camera;
+AudioManager audioManager;
+StorageManager storage;
+MotorController motors;
+BatteryMonitor battery;
+IRSensor irSensors[3];
+UltrasonicSensor ultrasonic;
+AutonomousMode autoMode;
+ManualMode manualMode;
+
+// System configuration
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* MONGODB_URI = "mongodb://your-mongodb-uri";
+const char* MONGODB_DATABASE = "surveillance_car";
+
+// Pin definitions
+const int IR_PINS[3] = {34, 35, 36};  // IR sensor pins
+const int ULTRASONIC_TRIG = 32;       // Ultrasonic trigger pin
+const int ULTRASONIC_ECHO = 33;       // Ultrasonic echo pin
+const int MOTOR_IN1 = 25;             // Motor 1 direction pin 1
+const int MOTOR_IN2 = 26;             // Motor 1 direction pin 2
+const int MOTOR_IN3 = 27;             // Motor 2 direction pin 1
+const int MOTOR_IN4 = 14;             // Motor 2 direction pin 2
+const int MOTOR_ENA = 12;             // Motor 1 enable pin
+const int MOTOR_ENB = 13;             // Motor 2 enable pin
+const int SPEAKER_PIN = 2;            // Speaker pin
+const int MIC_PIN = 4;                // Microphone pin
+const int BATTERY_PIN = 39;           // Battery voltage pin
+const int SD_CS = 5;                  // SD card chip select
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Starting Smart Surveillance Car System...");
+  
+  // Initialize system state
+  systemState.currentMode = MODE_MANUAL;
+  systemState.isRunning = false;
+  systemState.batteryLevel = 0;
+  systemState.obstacleDetected = false;
+  systemState.lastUpdate = millis();
+  
+  // Initialize hardware modules
+  initializeHardware();
+  
+  // Initialize communication
+  if (!wifiManager.begin(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("Failed to connect to WiFi");
+    return;
+  }
+  
+  // Initialize web server and WebSocket
+  wsServer.begin();
+  restApi.begin();
+  camera.begin();
+  
+  // Initialize storage
+  storage.begin(SD_CS);
+  
+  // Initialize audio system
+  audioManager.begin(SPEAKER_PIN, MIC_PIN);
+  audioManager.playSystemSound(SOUND_POWER_ON);
+  
+  // Initialize modes
+  autoMode.begin(irSensors, ultrasonic, motors, camera, audioManager);
+  manualMode.begin(motors, camera, audioManager);
+  
+  Serial.println("System initialized successfully");
+  Serial.print("Web dashboard available at: http://");
+  Serial.println(WiFi.localIP());
+  
+  systemState.isRunning = true;
+}
+
+void loop() {
+  // Update system state
+  updateSystemState();
+  
+  // Handle WebSocket communication
+  wsServer.handleClients();
+  
+  // Handle REST API requests
+  restApi.handleRequests();
+  
+  // Update camera streaming
+  camera.update();
+  
+  // Update battery monitoring
+  battery.update();
+  systemState.batteryLevel = battery.getPercentage();
+  
+  // Update sensors
+  updateSensors();
+  
+  // Execute current mode
+  if (systemState.currentMode == MODE_AUTONOMOUS) {
+    autoMode.update();
+  } else if (systemState.currentMode == MODE_MANUAL) {
+    manualMode.update();
+  }
+  
+  // Send status updates via WebSocket
+  if (millis() - systemState.lastUpdate > 1000) { // Update every second
+    sendStatusUpdate();
+    systemState.lastUpdate = millis();
+  }
+  
+  // Handle low battery warning
+  if (systemState.batteryLevel < 20 && systemState.batteryLevel > 0) {
+    audioManager.playSystemSound(SOUND_ALERT);
+    delay(2000); // Prevent spam
+  }
+  
+  delay(50); // Small delay for stability
+}
+
+void initializeHardware() {
+  Serial.println("Initializing hardware...");
+  
+  // Initialize IR sensors
+  for (int i = 0; i < 3; i++) {
+    irSensors[i].begin(IR_PINS[i]);
+  }
+  
+  // Initialize ultrasonic sensor
+  ultrasonic.begin(ULTRASONIC_TRIG, ULTRASONIC_ECHO);
+  
+  // Initialize motor controller
+  motors.begin(MOTOR_IN1, MOTOR_IN2, MOTOR_IN3, MOTOR_IN4, MOTOR_ENA, MOTOR_ENB);
+  
+  // Initialize battery monitor
+  battery.begin(BATTERY_PIN);
+  
+  Serial.println("Hardware initialized");
+}
+
+void updateSensors() {
+  // Update IR sensors
+  for (int i = 0; i < 3; i++) {
+    irSensors[i].update();
+  }
+  
+  // Update ultrasonic sensor
+  ultrasonic.update();
+  
+  // Check for obstacles
+  bool obstacleLeft = irSensors[0].isObstacleDetected();
+  bool obstacleCenter = irSensors[1].isObstacleDetected();
+  bool obstacleRight = irSensors[2].isObstacleDetected();
+  float distance = ultrasonic.getDistance();
+  
+  systemState.obstacleDetected = obstacleLeft || obstacleCenter || obstacleRight || (distance < 20.0);
+}
+
+void sendStatusUpdate() {
+  DynamicJsonDocument doc(1024);
+  doc["type"] = "status";
+  doc["mode"] = systemState.currentMode;
+  doc["battery"] = systemState.batteryLevel;
+  doc["obstacle"] = systemState.obstacleDetected;
+  doc["running"] = systemState.isRunning;
+  doc["timestamp"] = millis();
+  
+  String jsonString;
+  serializeJson(doc, jsonString);
+  wsServer.broadcast(jsonString);
+}
+
+// WebSocket message handler
+void onWebSocketMessage(String message) {
+  DynamicJsonDocument doc(1024);
+  deserializeJson(doc, message);
+  
+  String type = doc["type"];
+  
+  if (type == "control") {
+    String command = doc["command"];
+    int value = doc["value"];
+    
+    if (command == "mode") {
+      systemState.currentMode = (value == 0) ? MODE_MANUAL : MODE_AUTONOMOUS;
+      audioManager.playSystemSound(SOUND_ALERT);
+    } else if (command == "motor") {
+      manualMode.handleCommand(command, value);
+    }
+  } else if (type == "config") {
+    // Handle configuration updates
+    String key = doc["key"];
+    String value = doc["value"];
+    // Update configuration
+  }
+}
+
+// REST API handlers
+void handleGetStatus() {
+  DynamicJsonDocument doc(1024);
+  doc["mode"] = systemState.currentMode;
+  doc["battery"] = systemState.batteryLevel;
+  doc["obstacle"] = systemState.obstacleDetected;
+  doc["running"] = systemState.isRunning;
+  doc["uptime"] = millis();
+  
+  String jsonString;
+  serializeJson(doc, jsonString);
+  restApi.sendResponse(jsonString);
+}
+
+void handleSetMode() {
+  if (restApi.hasParameter("mode")) {
+    int mode = restApi.getParameter("mode").toInt();
+    systemState.currentMode = (mode == 0) ? MODE_MANUAL : MODE_AUTONOMOUS;
+    audioManager.playSystemSound(SOUND_ALERT);
+    restApi.sendResponse("{\"status\":\"success\"}");
+  } else {
+    restApi.sendResponse("{\"status\":\"error\",\"message\":\"Missing mode parameter\"}");
+  }
+}
+
+void handleMotorControl() {
+  if (restApi.hasParameter("direction") && restApi.hasParameter("speed")) {
+    String direction = restApi.getParameter("direction");
+    int speed = restApi.getParameter("speed").toInt();
+    
+    manualMode.handleCommand("motor", direction, speed);
+    restApi.sendResponse("{\"status\":\"success\"}");
+  } else {
+    restApi.sendResponse("{\"status\":\"error\",\"message\":\"Missing parameters\"}");
+  }
+}
