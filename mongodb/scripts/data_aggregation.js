@@ -6,7 +6,7 @@ const models = require('../models/surveillance_data');
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/surveillance_car');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://mohammadarsh1986_db_user:ly4TFtz4pLN6fC1v@yahmi.dycfiig.mongodb.net/?retryWrites=true&w=majority&appName=yahmi');
     console.log('MongoDB connected');
   } catch (error) {
     console.error('MongoDB connection error:', error);

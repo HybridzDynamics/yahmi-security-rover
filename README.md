@@ -1,4 +1,4 @@
-# Smart Surveillance Car System
+# Yahmi Security Rover
 
 A comprehensive ESP32-based surveillance car with real-time video streaming, autonomous navigation, and mobile/web control interfaces.
 
@@ -112,4 +112,4 @@ esp32_surveillance_car/
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see [LICENSE](/LICENSE) file for details
