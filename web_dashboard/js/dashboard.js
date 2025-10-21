@@ -1,46 +1,102 @@
-// Main Dashboard JavaScript
+// Professional Surveillance Car Dashboard
+// Complete implementation with all features
 
-class DashboardManager {
+class SurveillanceDashboard {
     constructor() {
-        this.ws = null;
+        this.socket = null;
         this.isConnected = false;
         this.currentMode = 'manual';
-        this.isRecording = false;
-        this.autoReconnect = true;
-        this.reconnectInterval = 5000;
-        this.heartbeatInterval = 30000;
-        
-        // AI Detection
         this.aiEnabled = false;
-        this.detectionMode = 'animal';
-        this.detectionThreshold = 0.5;
-        
-        // System data
-        this.systemData = {
-            battery: 0,
-            cpuFreq: 0,
-            freeHeap: 0,
-            uptime: 0,
-            storageUsage: 0,
-            wifiSSID: 'Unknown',
-            wifiSignal: 0
-        };
-        
-        this.sensorData = {
-            ir: [0, 0, 0],
-            distance: 0,
-            batteryVoltage: 0
-        };
+        this.isRecording = false;
+        this.deviceType = localStorage.getItem('selectedDevice') || 'esp32';
+        this.deviceIP = localStorage.getItem('deviceIP') || '192.168.1.100';
+        this.geminiAPIKey = 'AIzaSyAy_99DoGZkw9cYOOgjahv4-YJeud0I90E';
+        this.dailyUsageCount = 0;
+        this.dailyLimit = 1000;
         
         this.init();
     }
 
-    init() {
-        this.setupEventListeners();
-        this.connectWebSocket();
-        this.startHeartbeat();
-        this.hideLoadingOverlay();
-        this.loadSettings();
+    async init() {
+        console.log('Initializing Surveillance Dashboard...');
+        
+        try {
+            await this.initializeFirebase();
+            await this.connectWebSocket();
+            this.setupEventListeners();
+            this.initializeVideoStream();
+            this.startDataPolling();
+            this.loadDeviceSelection();
+            this.updateUI();
+            
+            console.log('Dashboard initialized successfully');
+        } catch (error) {
+            console.error('Dashboard initialization failed:', error);
+            this.showAlert('Initialization Error', 'Failed to initialize dashboard: ' + error.message);
+        }
+    }
+
+    async initializeFirebase() {
+        try {
+            // Firebase configuration
+            const firebaseConfig = {
+                apiKey: "your-api-key",
+                authDomain: "surveillance-car-project.firebaseapp.com",
+                projectId: "surveillance-car-project",
+                storageBucket: "surveillance-car-project.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "your-app-id"
+            };
+
+            if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
+                firebase.initializeApp(firebaseConfig);
+                this.db = firebase.firestore();
+                console.log('Firebase initialized');
+            }
+        } catch (error) {
+            console.warn('Firebase initialization failed:', error);
+        }
+    }
+
+    async connectWebSocket() {
+        try {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            this.socket = io(wsUrl);
+            
+            this.socket.on('connect', () => {
+                console.log('Connected to server');
+                this.isConnected = true;
+                this.updateConnectionStatus('connected');
+            });
+            
+            this.socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                this.isConnected = false;
+                this.updateConnectionStatus('disconnected');
+            });
+            
+            this.socket.on('sensor_update', (data) => {
+                this.updateSensorData(data);
+            });
+            
+            this.socket.on('status_update', (data) => {
+                this.updateSystemStatus(data);
+            });
+            
+            this.socket.on('ai_detection', (data) => {
+                this.handleAIDetection(data);
+            });
+            
+            this.socket.on('ai_detection_update', (data) => {
+                this.updateAIDetection(data);
+            });
+            
+        } catch (error) {
+            console.error('WebSocket connection failed:', error);
+            this.updateConnectionStatus('disconnected');
+        }
     }
 
     setupEventListeners() {
@@ -69,14 +125,30 @@ class DashboardManager {
         // Camera controls
         document.getElementById('captureBtn')?.addEventListener('click', () => this.captureImage());
         document.getElementById('recordBtn')?.addEventListener('click', () => this.toggleRecording());
-        document.getElementById('aiToggleBtn')?.addEventListener('click', () => this.toggleAIDetection());
+        document.getElementById('aiToggleBtn')?.addEventListener('click', () => this.toggleAI());
+        document.getElementById('fullscreenBtn')?.addEventListener('click', () => this.toggleFullscreen());
+
+        // Audio controls
+        document.getElementById('micToggleBtn')?.addEventListener('click', () => this.toggleMicrophone());
+        document.getElementById('playAlertBtn')?.addEventListener('click', () => this.playAlert());
+        document.getElementById('playSirenBtn')?.addEventListener('click', () => this.playSiren());
+
+        // System controls
+        document.getElementById('restartBtn')?.addEventListener('click', () => this.restartSystem());
+        document.getElementById('emergencyStopBtn')?.addEventListener('click', () => this.emergencyStop());
+        document.getElementById('testSystemBtn')?.addEventListener('click', () => this.testSystem());
+
+        // AI controls
+        document.getElementById('aiEnabled')?.addEventListener('change', (e) => {
+            this.toggleAI(e.target.checked);
+        });
 
         // Camera settings
         const qualitySlider = document.getElementById('qualitySlider');
         if (qualitySlider) {
             qualitySlider.addEventListener('input', (e) => {
                 document.getElementById('qualityValue').textContent = e.target.value;
-                this.sendCameraCommand('quality', parseInt(e.target.value));
+                this.updateCameraSettings({ quality: parseInt(e.target.value) });
             });
         }
 
@@ -84,7 +156,7 @@ class DashboardManager {
         if (brightnessSlider) {
             brightnessSlider.addEventListener('input', (e) => {
                 document.getElementById('brightnessValue').textContent = e.target.value;
-                this.sendCameraCommand('brightness', parseInt(e.target.value));
+                this.updateCameraSettings({ brightness: parseInt(e.target.value) });
             });
         }
 
@@ -92,216 +164,551 @@ class DashboardManager {
         if (contrastSlider) {
             contrastSlider.addEventListener('input', (e) => {
                 document.getElementById('contrastValue').textContent = e.target.value;
-                this.sendCameraCommand('contrast', parseInt(e.target.value));
+                this.updateCameraSettings({ contrast: parseInt(e.target.value) });
             });
         }
 
-        // Audio controls
+        // Audio settings
         const volumeSlider = document.getElementById('volumeSlider');
         if (volumeSlider) {
             volumeSlider.addEventListener('input', (e) => {
                 document.getElementById('volumeValue').textContent = e.target.value;
-                this.sendAudioCommand('volume', parseInt(e.target.value));
+                this.updateAudioSettings({ volume: parseInt(e.target.value) });
             });
         }
 
-        document.getElementById('playAlertBtn')?.addEventListener('click', () => this.sendAudioCommand('play', 2));
-        document.getElementById('playSirenBtn')?.addEventListener('click', () => this.sendAudioCommand('play', 3));
+        // Modal controls
+        document.querySelectorAll('.close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', (e) => {
+                e.target.closest('.modal').style.display = 'none';
+            });
+        });
 
-        // System controls
-        document.getElementById('restartBtn')?.addEventListener('click', () => this.restartSystem());
-        document.getElementById('apiStatusBtn')?.addEventListener('click', () => this.showApiStatus());
-
-        // AI controls
-        document.getElementById('aiEnabled')?.addEventListener('change', (e) => this.toggleAI(e.target.checked));
-        document.querySelectorAll('input[name="detectionMode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => this.setDetectionMode(e.target.value));
+        document.getElementById('alertOk')?.addEventListener('click', () => {
+            document.getElementById('alertModal').style.display = 'none';
         });
 
         // Detection alert actions
         document.getElementById('playLowPitchBtn')?.addEventListener('click', () => this.playLowPitch());
-        document.getElementById('playSirenBtn')?.addEventListener('click', () => this.playSiren());
         document.getElementById('continueSurveillanceBtn')?.addEventListener('click', () => this.continueSurveillance());
 
-        // Modal controls
-        document.querySelectorAll('.close').forEach(closeBtn => {
-            closeBtn.addEventListener('click', (e) => this.closeModal(e.target.closest('.modal')));
+        // Device selection
+        document.getElementById('connectDeviceBtn')?.addEventListener('click', () => this.connectToDevice());
+        document.getElementById('configureWiFiBtn')?.addEventListener('click', () => this.configureWiFi());
+        
+        // Device option clicks
+        document.getElementById('esp32Device')?.addEventListener('click', () => this.selectDevice('esp32'));
+        document.getElementById('raspberryPiDevice')?.addEventListener('click', () => this.selectDevice('raspberry_pi'));
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            this.handleKeyboardShortcuts(e);
         });
-
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => this.handleKeyPress(e));
-        document.addEventListener('keyup', (e) => this.handleKeyRelease(e));
-
-        // Touch controls for mobile
-        this.setupTouchControls();
-        
-        // Initialize new features
-        this.initializePatrolMode();
-        this.initializeEmergencyControls();
-        this.initializeStatusIndicators();
     }
 
-    connectWebSocket() {
-        // Try to get ESP32 IP from settings or use default
-        const esp32IP = localStorage.getItem('esp32_ip') || '192.168.1.100';
-        const esp32Port = localStorage.getItem('esp32_port') || '81';
+    handleKeyboardShortcuts(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        switch (e.key.toLowerCase()) {
+            case 'w':
+            case 'arrowup':
+                this.sendMotorCommand('forward');
+                break;
+            case 's':
+            case 'arrowdown':
+                this.sendMotorCommand('backward');
+                break;
+            case 'a':
+            case 'arrowleft':
+                this.sendMotorCommand('left');
+                break;
+            case 'd':
+            case 'arrowright':
+                this.sendMotorCommand('right');
+                break;
+            case ' ':
+                e.preventDefault();
+                this.sendMotorCommand('stop');
+                break;
+            case 'c':
+                this.captureImage();
+                break;
+            case 'r':
+                this.toggleRecording();
+                break;
+            case 'e':
+                this.emergencyStop();
+                break;
+        }
+    }
+
+    initializeVideoStream() {
+        const videoElement = document.getElementById('videoStream');
+        const videoImg = document.getElementById('videoStreamImg');
+        const loadingElement = document.getElementById('videoLoading');
         
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${esp32IP}:${esp32Port}`;
-        
-        console.log('Attempting WebSocket connection to:', wsUrl);
-        
-        try {
-            this.ws = new WebSocket(wsUrl);
+        if (videoElement) {
+            videoElement.addEventListener('loadstart', () => {
+                if (loadingElement) loadingElement.style.display = 'block';
+            });
             
-            this.ws.onopen = () => {
-                console.log('WebSocket connected');
-                this.isConnected = true;
-                this.updateConnectionStatus(true);
-                this.hideLoadingOverlay();
-            };
-
-            this.ws.onmessage = (event) => {
-                this.handleWebSocketMessage(event.data);
-            };
-
-            this.ws.onclose = () => {
-                console.log('WebSocket disconnected');
-                this.isConnected = false;
-                this.updateConnectionStatus(false);
-                this.showLoadingOverlay('Connection lost. Reconnecting...');
-                
-                if (this.autoReconnect) {
-                    setTimeout(() => this.connectWebSocket(), this.reconnectInterval);
+            videoElement.addEventListener('canplay', () => {
+                if (loadingElement) loadingElement.style.display = 'none';
+                videoElement.style.display = 'block';
+                if (videoImg) videoImg.style.display = 'none';
+            });
+            
+            videoElement.addEventListener('error', (e) => {
+                console.warn('Video stream failed, falling back to image stream');
+                if (loadingElement) loadingElement.style.display = 'none';
+                videoElement.style.display = 'none';
+                if (videoImg) {
+                    videoImg.style.display = 'block';
+                    videoImg.src = '/api/camera/stream?' + Date.now();
                 }
-            };
-
-            this.ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                this.showAlert('Connection Error', 'Failed to connect to surveillance car. Please check the connection.');
-                
-                // If WebSocket fails, try HTTP polling as fallback
-                this.startHTTPPolling();
-            };
-
-        } catch (error) {
-            console.error('WebSocket connection failed:', error);
-            this.showAlert('Connection Error', 'Failed to connect to surveillance car. Please check the connection.');
+            });
             
-            // Start HTTP polling as fallback
-            this.startHTTPPolling();
+            // Try to load video stream
+            videoElement.src = '/api/camera/stream';
         }
     }
-    
-    startHTTPPolling() {
-        console.log('Starting HTTP polling as fallback...');
-        this.isPolling = true;
-        this.pollingInterval = setInterval(() => {
-            this.pollESP32Data();
-        }, 2000); // Poll every 2 seconds
+
+    async startDataPolling() {
+        setInterval(async () => {
+            if (this.isConnected) {
+                await this.fetchSystemStatus();
+                await this.fetchSensorData();
+            }
+        }, 1000);
     }
-    
-    stopHTTPPolling() {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.isPolling = false;
-        }
-    }
-    
-    async pollESP32Data() {
+
+    async fetchSystemStatus() {
         try {
-            const esp32IP = localStorage.getItem('esp32_ip') || '192.168.1.100';
-            const response = await fetch(`http://${esp32IP}/api/status`);
-            
+            const response = await fetch('/api/status');
             if (response.ok) {
                 const data = await response.json();
-                this.handleWebSocketMessage(JSON.stringify(data));
+                this.updateSystemStatus(data);
             }
         } catch (error) {
-            console.warn('HTTP polling failed:', error);
+            console.warn('Failed to fetch system status:', error);
         }
     }
 
-    handleWebSocketMessage(data) {
+    async fetchSensorData() {
         try {
-            const message = JSON.parse(data);
-            
-            switch (message.type) {
-                case 'status':
-                    this.updateSystemStatus(message);
-                    break;
-                case 'sensor_data':
-                    this.updateSensorData(message);
-                    break;
-                case 'ai_detection':
-                    this.handleAIDetection(message);
-                    break;
-                case 'alert':
-                    this.showAlert('System Alert', message.message);
-                    break;
-                case 'welcome':
-                    console.log('Connected to surveillance car');
-                    break;
-                default:
-                    console.log('Unknown message type:', message.type);
+            const response = await fetch('/api/sensors?limit=1');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.length > 0) {
+                    this.updateSensorData(data[0]);
+                }
             }
         } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            console.warn('Failed to fetch sensor data:', error);
         }
     }
 
-    handleAIDetection(data) {
-        const { detection, confidence, boundingBox } = data;
+    updateSystemStatus(data) {
+        if (data.batteryLevel !== undefined) {
+            document.getElementById('batteryStatus').querySelector('span').textContent = data.batteryLevel + '%';
+            this.updateBatteryStatus(data.batteryLevel);
+        }
+        
+        if (data.cpuFreq !== undefined) {
+            document.getElementById('cpuFreq').textContent = data.cpuFreq;
+        }
+        
+        if (data.freeHeap !== undefined) {
+            document.getElementById('freeHeap').textContent = data.freeHeap.toLocaleString();
+        }
+        
+        if (data.uptime !== undefined) {
+            document.getElementById('uptime').textContent = Math.floor(data.uptime / 1000);
+        }
+        
+        if (data.storageUsage !== undefined) {
+            document.getElementById('storageUsage').textContent = data.storageUsage;
+        }
+        
+        if (data.wifiSSID) {
+            document.getElementById('wifiSSID').textContent = data.wifiSSID;
+        }
+        
+        if (data.wifiSignal !== undefined) {
+            document.getElementById('wifiSignal').textContent = data.wifiSignal;
+        }
+    }
+
+    updateSensorData(data) {
+        if (data.irSensors) {
+            const irSensors = Array.isArray(data.irSensors) ? data.irSensors : [data.irSensors.left, data.irSensors.center, data.irSensors.right];
+            
+            document.getElementById('irLeft').textContent = irSensors[0] || 0;
+            document.getElementById('irCenter').textContent = irSensors[1] || 0;
+            document.getElementById('irRight').textContent = irSensors[2] || 0;
+            
+            // Update sensor bars
+            this.updateSensorBar('irLeftBar', irSensors[0] || 0);
+            this.updateSensorBar('irCenterBar', irSensors[1] || 0);
+            this.updateSensorBar('irRightBar', irSensors[2] || 0);
+        }
+        
+        if (data.ultrasonicDistance !== undefined) {
+            document.getElementById('distance').textContent = data.ultrasonicDistance.toFixed(1);
+            this.updateSensorBar('distanceBar', Math.min(data.ultrasonicDistance / 200 * 100, 100));
+        }
+        
+        if (data.batteryVoltage !== undefined) {
+            document.getElementById('batteryVoltage').textContent = data.batteryVoltage.toFixed(1);
+            this.updateSensorBar('batteryBar', (data.batteryVoltage / 12.6) * 100);
+        }
+    }
+
+    updateSensorBar(barId, percentage) {
+        const bar = document.getElementById(barId);
+        if (bar) {
+            bar.style.width = Math.min(Math.max(percentage, 0), 100) + '%';
+        }
+    }
+
+    updateBatteryStatus(percentage) {
+        const batteryElement = document.getElementById('batteryStatus');
+        if (batteryElement) {
+            const icon = batteryElement.querySelector('i');
+            
+            if (percentage > 75) {
+                icon.className = 'fas fa-battery-full';
+                batteryElement.className = 'status-indicator connected';
+            } else if (percentage > 50) {
+                icon.className = 'fas fa-battery-three-quarters';
+                batteryElement.className = 'status-indicator connected';
+            } else if (percentage > 25) {
+                icon.className = 'fas fa-battery-half';
+                batteryElement.className = 'status-indicator warning';
+            } else {
+                icon.className = 'fas fa-battery-quarter';
+                batteryElement.className = 'status-indicator disconnected';
+            }
+        }
+    }
+
+    updateConnectionStatus(status) {
+        const connectionElement = document.getElementById('connectionStatus');
+        if (connectionElement) {
+            connectionElement.className = `status-indicator ${status}`;
+            connectionElement.querySelector('span').textContent = status === 'connected' ? 'Connected' : 'Disconnected';
+        }
+    }
+
+    setMode(mode) {
+        this.currentMode = mode;
+        
+        // Update UI
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById(mode + 'Mode')?.classList.add('active');
+        
+        // Send mode change to device
+        this.sendCommand('mode', { mode });
+        
+        console.log('Mode changed to:', mode);
+    }
+
+    async sendMotorCommand(action, value = null) {
+        const command = {
+            command: 'motor',
+            action: action,
+            value: value
+        };
+        
+        await this.sendCommand('control', command);
+    }
+
+    async sendCommand(type, data) {
+        try {
+            if (this.socket && this.socket.connected) {
+                this.socket.emit('control_command', { type, ...data });
+            } else {
+                // Fallback to HTTP
+                const response = await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ type, ...data })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Command failed');
+                }
+            }
+        } catch (error) {
+            console.error('Command failed:', error);
+            this.showNotification('Command failed: ' + error.message, 'error');
+        }
+    }
+
+    async captureImage() {
+        try {
+            // Try to capture from video stream first
+            const videoStream = document.getElementById('videoStream');
+            let imageBase64 = null;
+            
+            if (videoStream && videoStream.videoWidth > 0) {
+                // Create canvas to capture frame
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = videoStream.videoWidth || 640;
+                canvas.height = videoStream.videoHeight || 480;
+                
+                ctx.drawImage(videoStream, 0, 0, canvas.width, canvas.height);
+                
+                // Convert to base64
+                imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+            } else {
+                // Fallback: request capture from device
+                const response = await fetch('/api/camera/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Image captured from device', 'success');
+                    return;
+                } else {
+                    throw new Error('Device capture failed');
+                }
+            }
+            
+            if (imageBase64) {
+                // Send to backend for AI analysis
+                const response = await fetch('/api/detect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: imageBase64 })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Image captured and analyzed', 'success');
+                    
+                    if (result.analysis) {
+                        this.handleAIDetection(result.analysis);
+                    }
+                } else {
+                    throw new Error('AI analysis failed');
+                }
+            }
+
+        } catch (error) {
+            console.error('Image capture failed:', error);
+            this.showNotification('Image capture failed: ' + error.message, 'error');
+        }
+    }
+
+    async toggleRecording() {
+        if (this.isRecording) {
+            await this.stopRecording();
+        } else {
+            await this.startRecording();
+        }
+    }
+
+    async startRecording() {
+        try {
+            this.isRecording = true;
+            this.updateRecordButton(true);
+            this.sendCommand('camera', { action: 'start_recording' });
+            this.showNotification('Recording started', 'info');
+        } catch (error) {
+            console.error('Recording start failed:', error);
+            this.showNotification('Recording failed to start', 'error');
+        }
+    }
+
+    async stopRecording() {
+        try {
+            this.isRecording = false;
+            this.updateRecordButton(false);
+            this.sendCommand('camera', { action: 'stop_recording' });
+            this.showNotification('Recording stopped', 'info');
+        } catch (error) {
+            console.error('Recording stop failed:', error);
+            this.showNotification('Recording stop failed', 'error');
+        }
+    }
+
+    updateRecordButton(isRecording) {
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) {
+            if (isRecording) {
+                recordBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+                recordBtn.classList.add('recording');
+            } else {
+                recordBtn.innerHTML = '<i class="fas fa-video"></i> Record';
+                recordBtn.classList.remove('recording');
+            }
+        }
+    }
+
+    async toggleAI() {
+        this.aiEnabled = !this.aiEnabled;
+        
+        const aiToggle = document.getElementById('aiEnabled');
+        if (aiToggle) {
+            aiToggle.checked = this.aiEnabled;
+        }
+        
+        const aiStatus = document.getElementById('aiStatus');
+        if (aiStatus) {
+            aiStatus.className = `status-indicator ${this.aiEnabled ? 'ai-active' : 'ai-inactive'}`;
+            aiStatus.querySelector('span').textContent = this.aiEnabled ? 'AI Active' : 'AI Offline';
+        }
+        
+        this.sendCommand('ai', { enabled: this.aiEnabled });
+        this.showNotification(`AI Detection ${this.aiEnabled ? 'enabled' : 'disabled'}`, 'info');
+    }
+
+    async toggleMicrophone() {
+        // Implementation for microphone toggle
+        this.showNotification('Microphone control not implemented', 'info');
+    }
+
+    async playAlert() {
+        this.sendCommand('audio', { action: 'play_alert' });
+        this.showNotification('Alert sound played', 'info');
+    }
+
+    async playSiren() {
+        this.sendCommand('audio', { action: 'play_siren' });
+        this.showNotification('Siren sound played', 'warning');
+    }
+
+    async playLowPitch() {
+        this.sendCommand('audio', { action: 'play_low_pitch' });
+        this.showNotification('Low pitch sound played', 'info');
+    }
+
+    async restartSystem() {
+        if (confirm('Are you sure you want to restart the system?')) {
+            this.sendCommand('system', { action: 'restart' });
+            this.showNotification('System restart initiated', 'warning');
+        }
+    }
+
+    async emergencyStop() {
+        this.sendCommand('system', { action: 'emergency_stop' });
+        this.showNotification('EMERGENCY STOP ACTIVATED', 'error');
+        this.showAlert('Emergency Stop', 'Emergency stop activated! All systems halted.');
+    }
+
+    async testSystem() {
+        this.showNotification('Running system tests...', 'info');
+        
+        try {
+            const response = await fetch('/api/health');
+            if (response.ok) {
+                const health = await response.json();
+                this.showNotification('System test completed successfully', 'success');
+                console.log('System health:', health);
+            } else {
+                throw new Error('Health check failed');
+            }
+        } catch (error) {
+            this.showNotification('System test failed', 'error');
+        }
+    }
+
+    async updateCameraSettings(settings) {
+        this.sendCommand('camera', { action: 'update_settings', settings });
+    }
+
+    async updateAudioSettings(settings) {
+        this.sendCommand('audio', { action: 'update_settings', settings });
+    }
+
+    toggleFullscreen() {
+        const videoContainer = document.querySelector('.video-container');
+        if (!document.fullscreenElement) {
+            videoContainer.requestFullscreen().catch(err => {
+                console.error('Fullscreen failed:', err);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    handleAIDetection(analysis) {
+        console.log('AI Detection:', analysis);
         
         // Show detection overlay
-        this.showDetectionOverlay(boundingBox, detection, confidence);
+        this.showDetectionOverlay(analysis);
         
         // Add to detection history
-        this.addDetectionToHistory(detection, confidence);
+        this.addDetectionToHistory(analysis);
         
         // Show alert modal
-        this.showDetectionAlert(detection, confidence);
+        this.showDetectionAlert(analysis);
+        
+        // Play appropriate sound
+        if (analysis.alertLevel === 'critical' || analysis.alertLevel === 'high') {
+            this.playSiren();
+        } else {
+            this.playAlert();
+        }
     }
 
-    showDetectionOverlay(boundingBox, detection, confidence) {
+    showDetectionOverlay(analysis) {
         const overlay = document.getElementById('aiDetectionOverlay');
         const box = document.getElementById('detectionBox');
         const label = document.getElementById('detectionLabel');
         
-        if (boundingBox && box && label) {
-            box.style.left = boundingBox.x + 'px';
-            box.style.top = boundingBox.y + 'px';
-            box.style.width = boundingBox.width + 'px';
-            box.style.height = boundingBox.height + 'px';
-            box.style.display = 'block';
+        if (overlay && box && label && analysis.boundingBoxes) {
+            analysis.boundingBoxes.forEach(bbox => {
+                box.style.left = bbox.x + 'px';
+                box.style.top = bbox.y + 'px';
+                box.style.width = bbox.width + 'px';
+                box.style.height = bbox.height + 'px';
+                box.style.display = 'block';
+                
+                label.textContent = `${bbox.object} (${Math.round(bbox.confidence * 100)}%)`;
+                label.style.left = bbox.x + 'px';
+                label.style.top = (bbox.y - 25) + 'px';
+                label.style.display = 'block';
+            });
             
-            label.textContent = `${detection} (${Math.round(confidence * 100)}%)`;
-            label.style.left = boundingBox.x + 'px';
-            label.style.top = (boundingBox.y - 25) + 'px';
-            label.style.display = 'block';
+            // Hide after 5 seconds
+            setTimeout(() => {
+                box.style.display = 'none';
+                label.style.display = 'none';
+            }, 5000);
         }
-        
-        // Hide after 3 seconds
-        setTimeout(() => {
-            if (box) box.style.display = 'none';
-            if (label) label.style.display = 'none';
-        }, 3000);
     }
 
-    addDetectionToHistory(detection, confidence) {
+    addDetectionToHistory(analysis) {
         const detectionList = document.getElementById('detectionList');
         if (!detectionList) return;
-        
+
         const detectionItem = document.createElement('div');
-        detectionItem.className = `detection-item ${detection}`;
+        detectionItem.className = `detection-item ${analysis.alertLevel}`;
         
-        const timestamp = new Date().toLocaleTimeString();
+        const time = new Date().toLocaleTimeString();
+        const objects = analysis.detectedObjects?.join(', ') || 'Unknown';
+        const confidence = Math.round((analysis.confidence || 0) * 100);
+        
         detectionItem.innerHTML = `
             <div class="detection-info">
-                <strong>${detection.toUpperCase()}</strong>
-                <span class="confidence">${Math.round(confidence * 100)}%</span>
+                <div class="detection-objects">${objects}</div>
+                <div class="detection-time">${time}</div>
             </div>
-            <div class="detection-time">${timestamp}</div>
+            <div class="confidence">${confidence}%</div>
         `;
         
         detectionList.insertBefore(detectionItem, detectionList.firstChild);
@@ -312,82 +719,109 @@ class DashboardManager {
         }
     }
 
-    showDetectionAlert(detection, confidence) {
+    showDetectionAlert(analysis) {
         const modal = document.getElementById('detectionAlertModal');
         const title = document.getElementById('detectionAlertTitle');
         const message = document.getElementById('detectionAlertMessage');
         
         if (modal && title && message) {
-            title.textContent = `${detection.toUpperCase()} Detected!`;
-            message.textContent = `A ${detection} has been detected with ${Math.round(confidence * 100)}% confidence.`;
+            title.textContent = 'AI Detection Alert';
+            message.textContent = `Detected: ${analysis.detectedObjects?.join(', ') || 'Unknown object'}`;
             modal.style.display = 'block';
         }
     }
 
-    // AI Detection Methods
-    toggleAI(enabled) {
-        this.aiEnabled = enabled;
-        this.updateAIStatus();
-        
-        if (enabled) {
-            this.startAIDetection();
-        } else {
-            this.stopAIDetection();
+    continueSurveillance() {
+        document.getElementById('detectionAlertModal').style.display = 'none';
+        this.showNotification('Surveillance continued', 'info');
+    }
+
+    updateAIDetection(data) {
+        // Update AI detection status
+        console.log('AI Detection Update:', data);
+    }
+
+    loadDeviceSelection() {
+        const selectedDevice = localStorage.getItem('selectedDevice');
+        if (selectedDevice) {
+            this.selectDevice(selectedDevice);
         }
     }
 
-    setDetectionMode(mode) {
-        this.detectionMode = mode;
-        console.log('Detection mode set to:', mode);
-    }
-
-    async startAIDetection() {
-        this.sendWebSocketMessage({
-            type: 'ai_control',
-            action: 'start',
-            mode: this.detectionMode,
-            threshold: this.detectionThreshold
+    selectDevice(deviceType) {
+        this.deviceType = deviceType;
+        localStorage.setItem('selectedDevice', deviceType);
+        
+        // Update UI
+        document.querySelectorAll('.device-option').forEach(option => {
+            option.classList.remove('selected');
         });
+        
+        if (deviceType === 'esp32') {
+            document.getElementById('esp32Device')?.classList.add('selected');
+        } else if (deviceType === 'raspberry_pi') {
+            document.getElementById('raspberryPiDevice')?.classList.add('selected');
+        }
+        
+        this.updateDeviceStatus(deviceType, 'selected');
+        console.log('Device selected:', deviceType);
     }
 
-    stopAIDetection() {
-        this.sendWebSocketMessage({
-            type: 'ai_control',
-            action: 'stop'
-        });
+    async connectToDevice() {
+        if (!this.deviceType) {
+            this.showAlert('Device Selection', 'Please select a device type first');
+            return;
+        }
+        
+        try {
+            this.updateDeviceStatus(this.deviceType, 'connecting');
+            
+            // Send device selection to backend
+            const response = await fetch('/api/device/select', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    deviceType: this.deviceType
+                })
+            });
+            
+            if (response.ok) {
+                this.updateDeviceStatus(this.deviceType, 'connected');
+                this.showNotification(`Connected to ${this.deviceType === 'esp32' ? 'ESP32' : 'Raspberry Pi'}`, 'success');
+            } else {
+                throw new Error('Failed to connect to device');
+            }
+            
+        } catch (error) {
+            this.updateDeviceStatus(this.deviceType, 'disconnected');
+            this.showAlert('Connection Error', 'Failed to connect to device: ' + error.message);
+        }
     }
 
-    updateAIStatus() {
+    configureWiFi() {
+        window.location.href = 'wifi-config.html';
+    }
+
+    updateDeviceStatus(deviceType, status) {
+        const statusElement = document.getElementById(deviceType + 'Status');
+        if (statusElement) {
+            statusElement.textContent = status;
+            statusElement.className = `device-status ${status}`;
+        }
+    }
+
+    updateUI() {
+        // Update UI elements based on current state
+        this.updateConnectionStatus(this.isConnected ? 'connected' : 'disconnected');
+        
+        // Update AI status
         const aiStatus = document.getElementById('aiStatus');
         if (aiStatus) {
-            if (this.aiEnabled) {
-                aiStatus.className = 'status-indicator ai-active';
-                aiStatus.querySelector('span').textContent = 'AI: On';
-            } else {
-                aiStatus.className = 'status-indicator ai-inactive';
-                aiStatus.querySelector('span').textContent = 'AI: Off';
-            }
+            aiStatus.className = `status-indicator ${this.aiEnabled ? 'ai-active' : 'ai-inactive'}`;
+            aiStatus.querySelector('span').textContent = this.aiEnabled ? 'AI Active' : 'AI Offline';
         }
-    }
-
-    // Detection Alert Actions
-    playLowPitch() {
-        this.sendAudioCommand('play', 2); // Low pitch sound
-        this.closeModal(document.getElementById('detectionAlertModal'));
-    }
-
-    playSiren() {
-        this.sendAudioCommand('play', 3); // Siren sound
-        this.closeModal(document.getElementById('detectionAlertModal'));
-    }
-
-    continueSurveillance() {
-        this.closeModal(document.getElementById('detectionAlertModal'));
-    }
-
-    // Utility Methods
-    closeModal(modal) {
-        if (modal) modal.style.display = 'none';
     }
 
     showAlert(title, message) {
@@ -402,623 +836,101 @@ class DashboardManager {
         }
     }
 
-    hideAlert() {
-        const modal = document.getElementById('alertModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    showLoadingOverlay(message = 'Loading...') {
-        const overlay = document.getElementById('loadingOverlay');
-        const text = overlay?.querySelector('p');
-        if (overlay) {
-            if (text) text.textContent = message;
-            overlay.style.display = 'flex';
-        }
-    }
-
-    hideLoadingOverlay() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) overlay.style.display = 'none';
-    }
-
-    // Rest of the existing methods...
-    sendWebSocketMessage(message) {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(message));
-        } else {
-            console.warn('WebSocket not connected, cannot send message');
-        }
-    }
-
-    setMode(mode) {
-        this.currentMode = mode;
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas ${this.getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+            </div>
+        `;
         
-        // Update UI
-        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-        const modeBtn = document.getElementById(mode + 'Mode');
-        if (modeBtn) modeBtn.classList.add('active');
+        // Style the notification
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-width: 400px;
+        `;
         
-        // Send command
-        this.sendWebSocketMessage({
-            type: 'control',
-            command: 'mode',
-            value: mode
-        });
-        
-        console.log('Mode changed to:', mode);
-    }
-
-    sendMotorCommand(action, value = null) {
-        if (this.currentMode !== 'manual') {
-            this.showAlert('Mode Error', 'Please switch to manual mode to control motors.');
-            return;
-        }
-
-        const command = {
-            type: 'control',
-            command: 'motor',
-            action: action
+        // Set background color based on type
+        const colors = {
+            'success': '#27ae60',
+            'error': '#e74c3c',
+            'warning': '#f39c12',
+            'info': '#17a2b8'
         };
-
-        if (value !== null) {
-            command.value = value;
-        }
-
-        this.sendWebSocketMessage(command);
-        console.log('Motor command:', action, value);
-    }
-
-    sendCameraCommand(action, value) {
-        this.sendWebSocketMessage({
-            type: 'control',
-            command: 'camera',
-            action: action,
-            value: value
-        });
-        console.log('Camera command:', action, value);
-    }
-
-    sendAudioCommand(action, value) {
-        this.sendWebSocketMessage({
-            type: 'control',
-            command: 'audio',
-            action: action,
-            value: value
-        });
-        console.log('Audio command:', action, value);
-    }
-
-    captureImage() {
-        this.sendCameraCommand('capture', 0);
-        this.showAlert('Image Capture', 'Image captured successfully!');
-    }
-
-    toggleRecording() {
-        this.isRecording = !this.isRecording;
-        const recordBtn = document.getElementById('recordBtn');
+        notification.style.backgroundColor = colors[type] || colors.info;
         
-        if (recordBtn) {
-            if (this.isRecording) {
-                recordBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
-                recordBtn.classList.add('recording');
-                this.sendCameraCommand('start', 0);
-            } else {
-                recordBtn.innerHTML = '<i class="fas fa-video"></i> Record';
-                recordBtn.classList.remove('recording');
-                this.sendCameraCommand('stop', 0);
-            }
-        }
+        document.body.appendChild(notification);
+        
+        // Remove after 5 seconds for errors, 3 seconds for others
+        const duration = type === 'error' ? 5000 : 3000;
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, duration);
     }
 
-    toggleAIDetection() {
-        const aiEnabled = document.getElementById('aiEnabled');
-        if (aiEnabled) {
-            this.toggleAI(aiEnabled.checked);
-        }
+    getNotificationIcon(type) {
+        const icons = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        };
+        return icons[type] || icons.info;
     }
 
-    async restartSystem() {
-        if (confirm('Are you sure you want to restart the surveillance car system?')) {
-            this.sendWebSocketMessage({
-                type: 'control',
-                command: 'system',
-                action: 'restart',
-                value: 0
-            });
-            this.showAlert('System Restart', 'System is restarting. Please wait...');
-        }
+    handleError(error, context = 'Operation') {
+        console.error(`${context} failed:`, error);
+        const message = error.message || error.toString();
+        this.showNotification(`${context} failed: ${message}`, 'error');
     }
 
-    async showApiStatus() {
+    async withErrorHandling(operation, context = 'Operation') {
         try {
-            const response = await fetch('/api/status');
-            if (response.ok) {
-                const data = await response.json();
-                this.showAlert('API Status', `System: ${data.system}\nVersion: ${data.version}\nUptime: ${Math.floor(data.uptime / 1000)}s\nFree Heap: ${data.freeHeap} bytes`);
-            } else {
-                throw new Error('Failed to fetch API status');
-            }
+            return await operation();
         } catch (error) {
-            this.showAlert('API Error', 'Failed to fetch API status: ' + error.message);
+            this.handleError(error, context);
+            throw error;
         }
-    }
-
-    updateConnectionStatus(connected) {
-        const statusElement = document.getElementById('connectionStatus');
-        if (statusElement) {
-            const icon = statusElement.querySelector('i');
-            const text = statusElement.querySelector('span');
-
-            if (connected) {
-                statusElement.className = 'status-indicator connected';
-                if (icon) icon.className = 'fas fa-wifi';
-                if (text) text.textContent = 'Connected';
-            } else {
-                statusElement.className = 'status-indicator disconnected';
-                if (icon) icon.className = 'fas fa-wifi';
-                if (text) text.textContent = 'Disconnected';
-            }
-        }
-    }
-
-    updateSystemStatus(data) {
-        // Update battery status
-        if (data.battery !== undefined) {
-            this.updateBatteryStatus(data.battery);
-        }
-
-        // Update system info
-        if (data.uptime !== undefined) {
-            const uptimeElement = document.getElementById('uptime');
-            if (uptimeElement) uptimeElement.textContent = Math.floor(data.uptime / 1000);
-        }
-
-        if (data.freeHeap !== undefined) {
-            const freeHeapElement = document.getElementById('freeHeap');
-            if (freeHeapElement) freeHeapElement.textContent = data.freeHeap.toLocaleString();
-        }
-
-        if (data.cpuFreq !== undefined) {
-            const cpuFreqElement = document.getElementById('cpuFreq');
-            if (cpuFreqElement) cpuFreqElement.textContent = data.cpuFreq;
-        }
-
-        if (data.wifiSSID !== undefined) {
-            const wifiSSIDElement = document.getElementById('wifiSSID');
-            if (wifiSSIDElement) wifiSSIDElement.textContent = data.wifiSSID;
-        }
-
-        if (data.wifiSignal !== undefined) {
-            const wifiSignalElement = document.getElementById('wifiSignal');
-            if (wifiSignalElement) wifiSignalElement.textContent = data.wifiSignal;
-        }
-
-        // Update mode
-        if (data.mode !== undefined) {
-            this.currentMode = data.mode;
-            this.setMode(this.currentMode);
-        }
-    }
-
-    updateSensorData(data) {
-        // Update IR sensors
-        if (data.ir !== undefined) {
-            const irLeftElement = document.getElementById('irLeft');
-            const irCenterElement = document.getElementById('irCenter');
-            const irRightElement = document.getElementById('irRight');
-            
-            if (irLeftElement) irLeftElement.textContent = data.ir[0] || 0;
-            if (irCenterElement) irCenterElement.textContent = data.ir[1] || 0;
-            if (irRightElement) irRightElement.textContent = data.ir[2] || 0;
-        }
-
-        // Update ultrasonic sensor
-        if (data.distance !== undefined) {
-            const distanceElement = document.getElementById('distance');
-            if (distanceElement) distanceElement.textContent = data.distance.toFixed(1);
-        }
-
-        // Update battery voltage
-        if (data.batteryVoltage !== undefined) {
-            const batteryVoltageElement = document.getElementById('batteryVoltage');
-            if (batteryVoltageElement) batteryVoltageElement.textContent = data.batteryVoltage.toFixed(1);
-        }
-    }
-
-    updateBatteryStatus(percentage) {
-        const batteryElement = document.getElementById('batteryStatus');
-        if (batteryElement) {
-            const icon = batteryElement.querySelector('i');
-            const text = batteryElement.querySelector('span');
-
-            if (text) text.textContent = percentage + '%';
-
-            if (percentage > 50) {
-                batteryElement.className = 'status-indicator connected';
-                if (icon) icon.className = 'fas fa-battery-full';
-            } else if (percentage > 20) {
-                batteryElement.className = 'status-indicator low-battery';
-                if (icon) icon.className = 'fas fa-battery-half';
-            } else {
-                batteryElement.className = 'status-indicator disconnected';
-                if (icon) icon.className = 'fas fa-battery-empty';
-            }
-        }
-    }
-
-    startHeartbeat() {
-        setInterval(() => {
-            if (this.isConnected) {
-                this.sendWebSocketMessage({
-                    type: 'ping',
-                    timestamp: Date.now()
-                });
-            }
-        }, this.heartbeatInterval);
-    }
-
-    handleKeyPress(event) {
-        if (this.currentMode !== 'manual') return;
-
-        switch (event.code) {
-            case 'ArrowUp':
-            case 'KeyW':
-                event.preventDefault();
-                this.sendMotorCommand('forward');
-                break;
-            case 'ArrowDown':
-            case 'KeyS':
-                event.preventDefault();
-                this.sendMotorCommand('backward');
-                break;
-            case 'ArrowLeft':
-            case 'KeyA':
-                event.preventDefault();
-                this.sendMotorCommand('left');
-                break;
-            case 'ArrowRight':
-            case 'KeyD':
-                event.preventDefault();
-                this.sendMotorCommand('right');
-                break;
-            case 'Space':
-                event.preventDefault();
-                this.sendMotorCommand('stop');
-                break;
-        }
-    }
-
-    handleKeyRelease(event) {
-        if (this.currentMode !== 'manual') return;
-
-        switch (event.code) {
-            case 'ArrowUp':
-            case 'KeyW':
-            case 'ArrowDown':
-            case 'KeyS':
-            case 'ArrowLeft':
-            case 'KeyA':
-            case 'ArrowRight':
-            case 'KeyD':
-                event.preventDefault();
-                this.sendMotorCommand('stop');
-                break;
-        }
-    }
-
-    setupTouchControls() {
-        const controlBtns = document.querySelectorAll('.control-btn');
-        
-        controlBtns.forEach(btn => {
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                btn.click();
-            });
-        });
-    }
-
-    loadSettings() {
-        // Load settings from localStorage
-        const aiSettings = JSON.parse(localStorage.getItem('aiSettings') || '{}');
-        this.detectionMode = aiSettings.detectionMode || 'animal';
-        this.detectionThreshold = aiSettings.detectionThreshold || 0.5;
     }
 }
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    window.dashboard = new DashboardManager();
-    
-    // Initialize all integrated systems
-    setTimeout(() => {
-        // Initialize API Monitor
-        if (window.apiMonitor) {
-            console.log('API Monitor initialized');
-        }
-        
-        // Initialize System Logs
-        if (window.systemLogs) {
-            console.log('System Logs initialized');
-        }
-        
-        // Initialize Gemini AI
-        if (window.geminiAI) {
-            console.log('Gemini AI initialized');
-        }
-        
-        // Initialize Firebase Integration
-        if (window.firebaseIntegration) {
-            console.log('Firebase Integration initialized');
-        }
-        
-        // Initialize SMTP Notifications
-        if (window.smtpNotifications) {
-            console.log('SMTP Notifications initialized');
-        }
-        
-        // Initialize Telegram Bot
-        if (window.telegramBot) {
-            console.log('Telegram Bot initialized');
-        }
-        
-        // Initialize Simulation System
-        if (window.simulationSystem) {
-            console.log('Simulation System initialized');
-        }
-        
-        console.log('All systems initialized successfully');
-    }, 1000);
-    
-    // Initialize Patrol Mode
-    initializePatrolMode() {
-        const patrolEnabled = document.getElementById('patrolEnabled');
-        const startPatrolBtn = document.getElementById('startPatrolBtn');
-        const stopPatrolBtn = document.getElementById('stopPatrolBtn');
-        const saveRouteBtn = document.getElementById('saveRouteBtn');
-        const patrolSpeed = document.getElementById('patrolSpeed');
-        const patrolSpeedValue = document.getElementById('patrolSpeedValue');
-        
-        if (patrolSpeed && patrolSpeedValue) {
-            patrolSpeed.addEventListener('input', () => {
-                patrolSpeedValue.textContent = patrolSpeed.value;
-            });
-        }
-        
-        if (startPatrolBtn) {
-            startPatrolBtn.addEventListener('click', () => {
-                this.startPatrol();
-            });
-        }
-        
-        if (stopPatrolBtn) {
-            stopPatrolBtn.addEventListener('click', () => {
-                this.stopPatrol();
-            });
-        }
-        
-        if (saveRouteBtn) {
-            saveRouteBtn.addEventListener('click', () => {
-                this.savePatrolRoute();
-            });
-        }
-    }
-    
-    // Initialize Emergency Controls
-    initializeEmergencyControls() {
-        const emergencyStopBtn = document.getElementById('emergencyStopBtn');
-        const restartSystemBtn = document.getElementById('restartSystemBtn');
-        const resetSettingsBtn = document.getElementById('resetSettingsBtn');
-        
-        if (emergencyStopBtn) {
-            emergencyStopBtn.addEventListener('click', () => {
-                this.emergencyStop();
-            });
-        }
-        
-        if (restartSystemBtn) {
-            restartSystemBtn.addEventListener('click', () => {
-                this.restartSystem();
-            });
-        }
-        
-        if (resetSettingsBtn) {
-            resetSettingsBtn.addEventListener('click', () => {
-                this.resetSettings();
-            });
-        }
-    }
-    
-    // Initialize Status Indicators
-    initializeStatusIndicators() {
-        this.updateFirebaseStatus();
-        this.updateAIStatus();
-        this.updateBatteryStatus();
-    }
-    
-    // Patrol Mode Methods
-    startPatrol() {
-        const patrolSpeed = document.getElementById('patrolSpeed')?.value || 100;
-        const patrolDuration = document.getElementById('patrolDuration')?.value || 30;
-        const patrolRoute = document.getElementById('patrolRoute')?.value || 'circular';
-        
-        console.log('Starting patrol mode:', { patrolSpeed, patrolDuration, patrolRoute });
-        
-        // Send patrol command to ESP32
-        this.sendCommand('patrol', {
-            enabled: true,
-            speed: parseInt(patrolSpeed),
-            duration: parseInt(patrolDuration),
-            route: patrolRoute
-        });
-        
-        this.showAlert('Patrol Mode', 'Patrol mode started successfully');
-        this.updatePatrolStatus('Active', patrolRoute);
-    }
-    
-    stopPatrol() {
-        console.log('Stopping patrol mode');
-        
-        this.sendCommand('patrol', { enabled: false });
-        this.showAlert('Patrol Mode', 'Patrol mode stopped');
-        this.updatePatrolStatus('Stopped', 'None');
-    }
-    
-    savePatrolRoute() {
-        console.log('Saving patrol route');
-        this.showAlert('Route Saved', 'Patrol route saved successfully');
-    }
-    
-    updatePatrolStatus(status, route) {
-        const currentRoute = document.getElementById('currentRoute');
-        if (currentRoute) {
-            currentRoute.textContent = route;
-        }
-    }
-    
-    // Emergency Control Methods
-    emergencyStop() {
-        console.log('EMERGENCY STOP ACTIVATED');
-        
-        // Stop all movement immediately
-        this.sendCommand('emergency_stop', {});
-        
-        // Show emergency alert
-        this.showAlert('EMERGENCY STOP', 'All systems have been stopped immediately!', 'danger');
-        
-        // Update UI
-        this.updateConnectionStatus(false);
-    }
-    
-    restartSystem() {
-        if (confirm('Are you sure you want to restart the system? This will disconnect the car temporarily.')) {
-            console.log('Restarting system');
-            
-            this.sendCommand('restart', {});
-            this.showAlert('System Restart', 'System restart initiated. Please wait for reconnection.');
-            
-            // Show loading overlay
-            this.showLoadingOverlay('Restarting system...');
-            
-            // Attempt to reconnect after delay
-            setTimeout(() => {
-                this.connectWebSocket();
-            }, 10000);
-        }
-    }
-    
-    resetSettings() {
-        if (confirm('Are you sure you want to reset all settings to default? This action cannot be undone.')) {
-            console.log('Resetting settings');
-            
-            // Clear localStorage
-            localStorage.clear();
-            
-            // Reload page
-            window.location.reload();
-        }
-    }
-    
-    // Status Update Methods
-    updateFirebaseStatus() {
-        const firebaseStatus = document.getElementById('firebaseStatus');
-        if (firebaseStatus) {
-            if (window.firebaseIntegration && window.firebaseIntegration.isConnected()) {
-                firebaseStatus.className = 'status-indicator connected';
-                firebaseStatus.querySelector('span').textContent = 'Firebase Connected';
-            } else {
-                firebaseStatus.className = 'status-indicator disconnected';
-                firebaseStatus.querySelector('span').textContent = 'Firebase Offline';
-            }
-        }
-    }
-    
-    updateAIStatus() {
-        const aiStatus = document.getElementById('aiStatus');
-        if (aiStatus) {
-            if (window.geminiAI && window.geminiAI.isInitialized) {
-                aiStatus.className = 'status-indicator connected';
-                aiStatus.querySelector('span').textContent = 'AI Online';
-            } else {
-                aiStatus.className = 'status-indicator disconnected';
-                aiStatus.querySelector('span').textContent = 'AI Offline';
-            }
-        }
-    }
-    
-    updateBatteryStatus() {
-        const batteryStatus = document.getElementById('batteryStatus');
-        if (batteryStatus) {
-            const batteryLevel = this.sensorData.battery || 0;
-            const batteryIcon = batteryStatus.querySelector('i');
-            const batteryText = batteryStatus.querySelector('span');
-            
-            if (batteryLevel > 75) {
-                batteryIcon.className = 'fas fa-battery-full';
-                batteryStatus.className = 'status-indicator connected';
-            } else if (batteryLevel > 25) {
-                batteryIcon.className = 'fas fa-battery-half';
-                batteryStatus.className = 'status-indicator warning';
-            } else {
-                batteryIcon.className = 'fas fa-battery-empty';
-                batteryStatus.className = 'status-indicator disconnected';
-            }
-            
-            batteryText.textContent = `${batteryLevel}%`;
-        }
-    }
-    
-    // Enhanced Alert System
-    showAlert(title, message, type = 'info') {
-        const alertModal = document.getElementById('alertModal');
-        const alertTitle = document.getElementById('alertTitle');
-        const alertMessage = document.getElementById('alertMessage');
-        
-        if (alertModal && alertTitle && alertMessage) {
-            alertTitle.textContent = title;
-            alertMessage.textContent = message;
-            
-            // Update modal styling based on type
-            const modalContent = alertModal.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.className = `modal-content ${type}`;
-            }
-            
-            alertModal.style.display = 'block';
-        } else {
-            // Fallback to browser alert
-            alert(`${title}: ${message}`);
-        }
-    }
+    window.dashboard = new SurveillanceDashboard();
 });
 
-// Handle page visibility changes
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        console.log('Page hidden, pausing updates');
-    } else {
-        console.log('Page visible, resuming updates');
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
-});
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    const isMobile = window.innerWidth < 768;
-    const videoContainer = document.querySelector('.video-container');
     
-    if (videoContainer) {
-        if (isMobile) {
-            videoContainer.style.height = '250px';
-        } else {
-            videoContainer.style.height = '400px';
-        }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
     }
-});
-
-// Error handling
-window.addEventListener('error', (event) => {
-    console.error('Global error:', event.error);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
-});
+    
+    .notification {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+`;
+document.head.appendChild(style);

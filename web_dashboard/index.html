@@ -3,467 +3,845 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Surveillance Car - Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <title>Yahmi Security Rover - Advanced Surveillance System</title>
+    <link rel="stylesheet" href="css/yahmi-style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <i class="fas fa-car"></i>
-            <span>Surveillance Car</span>
-        </div>
-        <div class="nav-menu">
-            <a href="index.html" class="nav-link active">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
-            </a>
-            <a href="settings.html" class="nav-link">
-                <i class="fas fa-cog"></i> Settings
-            </a>
-            <a href="logs.html" class="nav-link">
-                <i class="fas fa-file-alt"></i> Logs
-            </a>
-            <a href="map.html" class="nav-link">
-                <i class="fas fa-map"></i> Map
-            </a>
-            <a href="detections.html" class="nav-link">
-                <i class="fas fa-eye"></i> Detections
-            </a>
-        </div>
-        <div class="nav-status">
-            <div class="status-indicator" id="connectionStatus">
-                <i class="fas fa-wifi"></i>
-                <span>Connecting...</span>
+    <!-- Navigation Header -->
+    <nav class="yahmi-navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>Yahmi</h1>
+                    <span>Security Rover</span>
+                </div>
             </div>
-            <div class="status-indicator" id="batteryStatus">
-                <i class="fas fa-battery-full"></i>
-                <span>0%</span>
+            
+            <div class="nav-menu">
+                <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#surveillance" class="nav-link" data-page="surveillance">
+                    <i class="fas fa-video"></i>
+                    <span>Surveillance</span>
+                </a>
+                <a href="#control" class="nav-link" data-page="control">
+                    <i class="fas fa-gamepad"></i>
+                    <span>Control</span>
+                </a>
+                <a href="#analytics" class="nav-link" data-page="analytics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#settings" class="nav-link" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
             </div>
-            <div class="status-indicator" id="firebaseStatus">
-                <i class="fas fa-database"></i>
-                <span>Firebase Offline</span>
-            </div>
-            <div class="status-indicator" id="aiStatus">
-                <i class="fas fa-brain"></i>
-                <span>AI Offline</span>
+            
+            <div class="nav-actions">
+                <div class="status-indicators">
+                    <div class="status-item" id="connectionStatus">
+                        <i class="fas fa-wifi"></i>
+                        <span>Connecting...</span>
+                    </div>
+                    <div class="status-item" id="batteryStatus">
+                        <i class="fas fa-battery-full"></i>
+                        <span>100%</span>
+                    </div>
+                    <div class="status-item" id="aiStatus">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Ready</span>
+                    </div>
+                </div>
+                
+                <div class="user-menu">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">Admin</span>
+                        <span class="user-role">System Operator</span>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Video Stream Section -->
-        <section class="video-section">
-            <div class="video-container">
-                <img id="videoStream" src="/stream" alt="Live Video Stream" />
-                <div class="video-overlay">
+    <!-- Main Content Area -->
+    <main class="yahmi-main">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page-content active">
+            <div class="page-header">
+                <h2>System Dashboard</h2>
+                <p>Real-time monitoring and control of your security rover</p>
+            </div>
+            
+            <!-- System Overview Cards -->
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>System Status</h3>
+                        <div class="status-value" id="systemStatus">Online</div>
+                        <div class="status-details">
+                            <span>Uptime: <strong id="uptime">0h 0m</strong></span>
+                            <span>CPU: <strong id="cpuUsage">0%</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="card-icon battery">
+                        <i class="fas fa-battery-full"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Battery Level</h3>
+                        <div class="battery-level">
+                            <div class="battery-bar">
+                                <div class="battery-fill" id="batteryFill"></div>
+                            </div>
+                            <span id="batteryPercent">100%</span>
+                        </div>
+                        <div class="status-details">
+                            <span>Voltage: <strong id="batteryVoltage">12.6V</strong></span>
+                            <span>Temperature: <strong id="batteryTemp">25°C</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="card-icon wifi">
+                        <i class="fas fa-wifi"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Network</h3>
+                        <div class="network-info">
+                            <div class="signal-strength" id="signalStrength">
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                                <div class="signal-bar"></div>
+                            </div>
+                            <span id="wifiSSID">Yahmi-Network</span>
+                        </div>
+                        <div class="status-details">
+                            <span>IP: <strong id="deviceIP">192.168.1.100</strong></span>
+                            <span>Signal: <strong id="wifiSignal">-45 dBm</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overview-card">
+                    <div class="card-icon ai">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>AI Detection</h3>
+                        <div class="ai-status" id="aiStatusCard">
+                            <div class="ai-indicator"></div>
+                            <span>Active</span>
+                        </div>
+                        <div class="status-details">
+                            <span>Detections: <strong id="detectionCount">0</strong></span>
+                            <span>Confidence: <strong id="aiConfidence">95%</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Live Video Feed -->
+            <div class="video-section">
+                <div class="section-header">
+                    <h3>Live Surveillance Feed</h3>
                     <div class="video-controls">
-                        <button id="captureBtn" class="btn btn-secondary">
-                            <i class="fas fa-camera"></i> Capture
+                        <button class="control-btn" id="captureBtn">
+                            <i class="fas fa-camera"></i>
+                            Capture
                         </button>
-                        <button id="recordBtn" class="btn btn-danger">
-                            <i class="fas fa-video"></i> Record
+                        <button class="control-btn" id="recordBtn">
+                            <i class="fas fa-video"></i>
+                            Record
                         </button>
-                        <button id="aiToggleBtn" class="btn btn-warning">
-                            <i class="fas fa-brain"></i> AI Detection
+                        <button class="control-btn" id="aiToggleBtn">
+                            <i class="fas fa-brain"></i>
+                            AI Detection
+                        </button>
+                        <button class="control-btn" id="fullscreenBtn">
+                            <i class="fas fa-expand"></i>
+                            Fullscreen
                         </button>
                     </div>
-                    <div class="ai-detection-overlay" id="aiDetectionOverlay">
-                        <div class="detection-box" id="detectionBox"></div>
-                        <div class="detection-label" id="detectionLabel"></div>
+                </div>
+                
+                <div class="video-container">
+                    <div class="video-wrapper">
+                        <video id="videoStream" autoplay muted playsinline>
+                            <source src="/api/camera/stream" type="video/mp4">
+                        </video>
+                        <img id="videoStreamImg" src="/api/camera/stream" alt="Live Feed" style="display: none;">
+                        <div class="video-overlay">
+                            <div class="video-info">
+                                <span id="videoResolution">1920x1080</span>
+                                <span id="videoFPS">30 FPS</span>
+                                <span id="videoQuality">HD</span>
+                            </div>
+                            <div class="ai-detection-overlay" id="aiOverlay">
+                                <div class="detection-box" id="detectionBox"></div>
+                                <div class="detection-label" id="detectionLabel"></div>
+                            </div>
+                        </div>
+                        <div class="video-loading" id="videoLoading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Connecting to camera...</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Control Panel -->
-        <section class="control-panel">
-            <!-- Mode Selection -->
-            <div class="mode-selector">
-                <h3>Control Mode</h3>
-                <div class="mode-buttons">
-                    <button id="manualMode" class="mode-btn active">
-                        <i class="fas fa-gamepad"></i> Manual
-                    </button>
-                    <button id="autonomousMode" class="mode-btn">
-                        <i class="fas fa-robot"></i> Autonomous
-                    </button>
-                    <button id="patrolMode" class="mode-btn">
-                        <i class="fas fa-route"></i> Patrol
-                    </button>
-                    <button id="surveillanceMode" class="mode-btn">
-                        <i class="fas fa-eye"></i> Surveillance
-                    </button>
+            
+            <!-- System Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h4>Sensor Data</h4>
+                    <div class="sensor-grid">
+                        <div class="sensor-item">
+                            <span>IR Left</span>
+                            <div class="sensor-bar">
+                                <div class="sensor-fill" id="irLeftBar"></div>
+                            </div>
+                            <span id="irLeftValue">0</span>
+                        </div>
+                        <div class="sensor-item">
+                            <span>IR Center</span>
+                            <div class="sensor-bar">
+                                <div class="sensor-fill" id="irCenterBar"></div>
+                            </div>
+                            <span id="irCenterValue">0</span>
+                        </div>
+                        <div class="sensor-item">
+                            <span>IR Right</span>
+                            <div class="sensor-bar">
+                                <div class="sensor-fill" id="irRightBar"></div>
+                            </div>
+                            <span id="irRightValue">0</span>
+                        </div>
+                        <div class="sensor-item">
+                            <span>Distance</span>
+                            <div class="sensor-bar">
+                                <div class="sensor-fill" id="distanceBar"></div>
+                            </div>
+                            <span id="distanceValue">0 cm</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Performance</h4>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Recent Activity</h4>
+                    <div class="activity-list" id="activityList">
+                        <div class="activity-item">
+                            <i class="fas fa-play-circle"></i>
+                            <span>System started</span>
+                            <span class="time">2 minutes ago</span>
+                        </div>
+                        <div class="activity-item">
+                            <i class="fas fa-wifi"></i>
+                            <span>Connected to network</span>
+                            <span class="time">5 minutes ago</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Motor Controls -->
-            <div class="motor-controls">
-                <h3>Motor Control</h3>
-                <div class="control-grid">
-                    <div class="control-row">
-                        <button id="forwardBtn" class="control-btn">
-                            <i class="fas fa-arrow-up"></i>
+        </div>
+        
+        <!-- Surveillance Page -->
+        <div id="surveillance-page" class="page-content">
+            <div class="page-header">
+                <h2>Surveillance Center</h2>
+                <p>Monitor and manage security operations</p>
+            </div>
+            
+            <div class="surveillance-grid">
+                <div class="surveillance-panel">
+                    <div class="panel-header">
+                        <h3>Live Feed</h3>
+                        <div class="panel-controls">
+                            <button class="btn btn-primary" id="startSurveillance">
+                                <i class="fas fa-play"></i>
+                                Start Surveillance
+                            </button>
+                            <button class="btn btn-secondary" id="stopSurveillance">
+                                <i class="fas fa-stop"></i>
+                                Stop
+                            </button>
+                        </div>
+                    </div>
+                    <div class="surveillance-feed">
+                        <video id="surveillanceStream" autoplay muted playsinline>
+                            <source src="/api/camera/stream" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+                
+                <div class="detection-panel">
+                    <div class="panel-header">
+                        <h3>AI Detections</h3>
+                        <div class="detection-filters">
+                            <select id="detectionFilter">
+                                <option value="all">All Detections</option>
+                                <option value="person">Person</option>
+                                <option value="vehicle">Vehicle</option>
+                                <option value="animal">Animal</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="detection-list" id="detectionList">
+                        <!-- Detections will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Page -->
+        <div id="control-page" class="page-content">
+            <div class="page-header">
+                <h2>Rover Control</h2>
+                <p>Manual and autonomous control of your security rover</p>
+            </div>
+            
+            <div class="control-grid">
+                <div class="control-panel">
+                    <h3>Movement Control</h3>
+                    <div class="movement-controls">
+                        <div class="control-pad">
+                            <button class="control-btn" id="forwardBtn">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <div class="control-row">
+                                <button class="control-btn" id="leftBtn">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <button class="control-btn stop" id="stopBtn">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                                <button class="control-btn" id="rightBtn">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                            <button class="control-btn" id="backwardBtn">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                        </div>
+                        <div class="speed-control">
+                            <label>Speed: <span id="speedValue">50%</span></label>
+                            <input type="range" id="speedSlider" min="0" max="100" value="50">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-camera-panel">
+                    <h3>Live Camera Feed</h3>
+                    <div class="control-camera-container">
+                        <div class="control-camera-wrapper">
+                            <video id="controlVideoStream" autoplay muted playsinline>
+                                <source src="/api/camera/stream" type="video/mp4">
+                            </video>
+                            <img id="controlVideoStreamImg" src="/api/camera/stream" alt="Live Feed" style="display: none;">
+                            <div class="control-camera-overlay">
+                                <div class="control-camera-info">
+                                    <span id="controlVideoResolution">640x480</span>
+                                    <span id="controlVideoFPS">30 FPS</span>
+                                </div>
+                                <div class="control-camera-controls">
+                                    <button class="control-camera-btn" id="controlCaptureBtn" title="Capture Image">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                    <button class="control-camera-btn" id="controlRecordBtn" title="Start/Stop Recording">
+                                        <i class="fas fa-video"></i>
+                                    </button>
+                                    <button class="control-camera-btn" id="controlFullscreenBtn" title="Fullscreen">
+                                        <i class="fas fa-expand"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="control-camera-loading" id="controlCameraLoading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Connecting to camera...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mode-panel">
+                    <h3>Operation Mode</h3>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="manual">
+                            <i class="fas fa-gamepad"></i>
+                            <span>Manual</span>
+                        </button>
+                        <button class="mode-btn" data-mode="autonomous">
+                            <i class="fas fa-robot"></i>
+                            <span>Autonomous</span>
+                        </button>
+                        <button class="mode-btn" data-mode="patrol">
+                            <i class="fas fa-route"></i>
+                            <span>Patrol</span>
+                        </button>
+                        <button class="mode-btn" data-mode="surveillance">
+                            <i class="fas fa-eye"></i>
+                            <span>Surveillance</span>
                         </button>
                     </div>
-                    <div class="control-row">
-                        <button id="leftBtn" class="control-btn">
-                            <i class="fas fa-arrow-left"></i>
+                </div>
+                
+                <div class="audio-panel">
+                    <h3>Audio Control</h3>
+                    <div class="audio-controls">
+                        <button class="btn btn-warning" id="playAlert">
+                            <i class="fas fa-volume-up"></i>
+                            Alert Sound
                         </button>
-                        <button id="stopBtn" class="control-btn stop">
+                        <button class="btn btn-danger" id="playSiren">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Siren
+                        </button>
+                        <button class="btn btn-info" id="playLowPitch">
+                            <i class="fas fa-volume-down"></i>
+                            Low Pitch
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analytics Page -->
+        <div id="analytics-page" class="page-content">
+            <div class="page-header">
+                <h2>Analytics & Reports</h2>
+                <p>Comprehensive analysis of security operations</p>
+            </div>
+            
+            <!-- Mapping System -->
+            <div class="mapping-section">
+                <div class="section-header">
+                    <h3>Rover Mapping & Navigation</h3>
+                    <div class="mapping-controls">
+                        <button class="btn btn-primary" id="startMapping">
+                            <i class="fas fa-map"></i>
+                            Start Mapping
+                        </button>
+                        <button class="btn btn-secondary" id="clearMap">
+                            <i class="fas fa-trash"></i>
+                            Clear Map
+                        </button>
+                        <button class="btn btn-info" id="saveMap">
+                            <i class="fas fa-save"></i>
+                            Save Map
+                        </button>
+                        <button class="btn btn-warning" id="loadMap">
+                            <i class="fas fa-folder-open"></i>
+                            Load Map
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mapping-grid">
+                    <div class="map-panel">
+                        <h4>Interactive Map</h4>
+                        <div class="map-container" id="roverMap">
+                            <div class="map-placeholder">
+                                <i class="fas fa-map-marked-alt"></i>
+                                <p>Map will be loaded here</p>
+                                <p>Click to add waypoints</p>
+                            </div>
+                        </div>
+                        <div class="map-info">
+                            <div class="map-stats">
+                                <span>Waypoints: <strong id="waypointCount">0</strong></span>
+                                <span>Distance: <strong id="totalDistance">0m</strong></span>
+                                <span>Area: <strong id="mappedArea">0m²</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="waypoints-panel">
+                        <h4>Waypoints & Routes</h4>
+                        <div class="waypoints-controls">
+                            <button class="btn btn-sm btn-primary" id="addWaypoint">
+                                <i class="fas fa-plus"></i>
+                                Add Waypoint
+                            </button>
+                            <button class="btn btn-sm btn-secondary" id="createRoute">
+                                <i class="fas fa-route"></i>
+                                Create Route
+                            </button>
+                        </div>
+                        <div class="waypoints-list" id="waypointsList">
+                            <div class="waypoint-item">
+                                <div class="waypoint-info">
+                                    <span class="waypoint-name">Home Base</span>
+                                    <span class="waypoint-coords">0, 0</span>
+                                </div>
+                                <div class="waypoint-actions">
+                                    <button class="btn-icon" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-icon" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Device Testing & Simulation -->
+            <div class="testing-section">
+                <div class="section-header">
+                    <h3>Device Testing & Simulation</h3>
+                    <div class="testing-controls">
+                        <button class="btn btn-primary" id="startSimulation">
+                            <i class="fas fa-play"></i>
+                            Start Simulation
+                        </button>
+                        <button class="btn btn-secondary" id="stopSimulation">
                             <i class="fas fa-stop"></i>
+                            Stop Simulation
                         </button>
-                        <button id="rightBtn" class="control-btn">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                    <div class="control-row">
-                        <button id="backwardBtn" class="control-btn">
-                            <i class="fas fa-arrow-down"></i>
+                        <button class="btn btn-info" id="testConnection">
+                            <i class="fas fa-wifi"></i>
+                            Test Connection
                         </button>
                     </div>
                 </div>
-                <div class="speed-control">
-                    <label for="speedSlider">Speed: <span id="speedValue">150</span></label>
-                    <input type="range" id="speedSlider" min="50" max="255" value="150">
-                </div>
-            </div>
-
-            <!-- Camera Controls -->
-            <div class="camera-controls">
-                <h3>Camera Settings</h3>
-                <div class="camera-settings">
-                    <div class="setting-group">
-                        <label for="qualitySlider">Quality: <span id="qualityValue">12</span></label>
-                        <input type="range" id="qualitySlider" min="0" max="63" value="12">
-                    </div>
-                    <div class="setting-group">
-                        <label for="brightnessSlider">Brightness: <span id="brightnessValue">0</span></label>
-                        <input type="range" id="brightnessSlider" min="-2" max="2" value="0">
-                    </div>
-                    <div class="setting-group">
-                        <label for="contrastSlider">Contrast: <span id="contrastValue">0</span></label>
-                        <input type="range" id="contrastSlider" min="-2" max="2" value="0">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Audio Controls -->
-            <div class="audio-controls">
-                <h3>Audio Control</h3>
-                <div class="audio-settings">
-                    <div class="setting-group">
-                        <label for="volumeSlider">Volume: <span id="volumeValue">50</span></label>
-                        <input type="range" id="volumeSlider" min="0" max="100" value="50">
-                    </div>
-                    <div class="audio-buttons">
-                        <button id="playAlertBtn" class="btn btn-warning">
-                            <i class="fas fa-volume-up"></i> Alert
-                        </button>
-                        <button id="playSirenBtn" class="btn btn-danger">
-                            <i class="fas fa-exclamation-triangle"></i> Siren
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- System Status -->
-        <section class="system-status">
-            <h3>System Status</h3>
-            <div class="status-grid">
-                <div class="status-item">
-                    <i class="fas fa-microchip"></i>
-                    <span>CPU: <span id="cpuFreq">240</span> MHz</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-memory"></i>
-                    <span>Free Heap: <span id="freeHeap">250000</span> bytes</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-clock"></i>
-                    <span>Uptime: <span id="uptime">0</span> s</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-hdd"></i>
-                    <span>Storage: <span id="storageUsage">45</span>%</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-wifi"></i>
-                    <span>WiFi: <span id="wifiSSID">SurveillanceCar</span></span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-signal"></i>
-                    <span>Signal: <span id="wifiSignal">-45</span> dBm</span>
-                </div>
-            </div>
-            <div class="system-actions">
-                <button id="restartBtn" class="btn btn-danger">
-                    <i class="fas fa-power-off"></i> Restart System
-                </button>
-                <button id="apiStatusBtn" class="btn btn-info">
-                    <i class="fas fa-code"></i> API Status
-                </button>
-                <button id="testSystemBtn" class="btn btn-warning">
-                    <i class="fas fa-vial"></i> Test System
-                </button>
-                <button id="simulationBtn" class="btn btn-success">
-                    <i class="fas fa-play"></i> Start Simulation
-                </button>
-            </div>
-        </section>
-
-        <!-- Sensor Data -->
-        <section class="sensor-data">
-            <h3>Sensor Data</h3>
-            <div class="sensor-grid">
-                <div class="sensor-item">
-                    <h4>IR Sensors</h4>
-                    <div class="sensor-values">
-                        <div class="sensor-value">
-                            <span>Left: <span id="irLeft">0</span></span>
-                            <div class="sensor-bar">
-                                <div class="sensor-fill" id="irLeftBar" style="width: 0%"></div>
+                
+                <div class="simulation-grid">
+                    <div class="simulation-panel">
+                        <h4>Device Status</h4>
+                        <div class="device-status-grid">
+                            <div class="status-item">
+                                <span>ESP32</span>
+                                <div class="status-indicator" id="esp32Status">
+                                    <div class="indicator-dot"></div>
+                                    <span>Disconnected</span>
+                                </div>
+                            </div>
+                            <div class="status-item">
+                                <span>Raspberry Pi</span>
+                                <div class="status-indicator" id="piStatus">
+                                    <div class="indicator-dot"></div>
+                                    <span>Disconnected</span>
+                                </div>
+                            </div>
+                            <div class="status-item">
+                                <span>Camera</span>
+                                <div class="status-indicator" id="cameraStatus">
+                                    <div class="indicator-dot"></div>
+                                    <span>Disconnected</span>
+                                </div>
+                            </div>
+                            <div class="status-item">
+                                <span>Sensors</span>
+                                <div class="status-indicator" id="sensorStatus">
+                                    <div class="indicator-dot"></div>
+                                    <span>Disconnected</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="sensor-value">
-                            <span>Center: <span id="irCenter">0</span></span>
-                            <div class="sensor-bar">
-                                <div class="sensor-fill" id="irCenterBar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="sensor-value">
-                            <span>Right: <span id="irRight">0</span></span>
-                            <div class="sensor-bar">
-                                <div class="sensor-fill" id="irRightBar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="simulation-panel">
+                        <h4>Test Results</h4>
+                        <div class="test-results" id="testResults">
+                            <div class="test-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>System initialized</span>
+                                <span class="test-time">2s ago</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="sensor-item">
-                    <h4>Ultrasonic</h4>
-                    <div class="sensor-value">
-                        <span>Distance: <span id="distance">0.0</span> cm</span>
-                        <div class="sensor-bar">
-                            <div class="sensor-fill" id="distanceBar" style="width: 0%"></div>
-                        </div>
+            </div>
+            
+            <div class="analytics-grid">
+                <div class="chart-card">
+                    <h3>Detection Trends</h3>
+                    <div class="chart-container">
+                        <canvas id="detectionChart"></canvas>
                     </div>
                 </div>
-                <div class="sensor-item">
-                    <h4>Battery</h4>
-                    <div class="sensor-value">
-                        <span>Voltage: <span id="batteryVoltage">0.0</span> V</span>
-                        <div class="sensor-bar">
-                            <div class="sensor-fill" id="batteryBar" style="width: 0%"></div>
+                
+                <div class="chart-card">
+                    <h3>System Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="performanceAnalyticsChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="stats-card">
+                    <h3>Security Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalDetections">0</div>
+                            <div class="stat-label">Total Detections</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="patrolDistance">0 km</div>
+                            <div class="stat-label">Patrol Distance</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="uptimeHours">0h</div>
+                            <div class="stat-label">System Uptime</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="batteryCycles">0</div>
+                            <div class="stat-label">Battery Cycles</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Simulation Control Panel -->
-        <section class="simulation-panel">
-            <h3><i class="fas fa-robot"></i> Simulation Control</h3>
-            <div class="simulation-controls">
-                <div class="simulation-status">
-                    <div class="status-indicator" id="simulationStatus">
-                        <i class="fas fa-circle"></i>
-                        <span>Stopped</span>
-                    </div>
-                    <div class="simulation-info">
-                        <span>Duration: <span id="simulationDuration">00:00</span></span>
-                        <span>Speed: <span id="simulationSpeed">1x</span></span>
-                    </div>
-                </div>
-                <div class="simulation-buttons">
-                    <button id="startSimulationBtn" class="btn btn-success">
-                        <i class="fas fa-play"></i> Start
-                    </button>
-                    <button id="pauseSimulationBtn" class="btn btn-warning" disabled>
-                        <i class="fas fa-pause"></i> Pause
-                    </button>
-                    <button id="stopSimulationBtn" class="btn btn-danger" disabled>
-                        <i class="fas fa-stop"></i> Stop
-                    </button>
-                    <button id="resetSimulationBtn" class="btn btn-secondary">
-                        <i class="fas fa-undo"></i> Reset
-                    </button>
-                </div>
-                <div class="simulation-settings">
-                    <div class="setting-group">
-                        <label for="simulationSpeedSlider">Simulation Speed:</label>
-                        <input type="range" id="simulationSpeedSlider" min="0.1" max="5" step="0.1" value="1">
-                        <span id="simulationSpeedValue">1x</span>
-                    </div>
-                    <div class="setting-group">
-                        <label for="simulationScenario">Scenario:</label>
-                        <select id="simulationScenario">
-                            <option value="patrol">Patrol Mode</option>
-                            <option value="obstacle">Obstacle Avoidance</option>
-                            <option value="detection">AI Detection</option>
-                            <option value="battery">Battery Drain</option>
-                            <option value="custom">Custom</option>
+        </div>
+        
+        <!-- Settings Page -->
+        <div id="settings-page" class="page-content">
+            <div class="page-header">
+                <h2>System Settings</h2>
+                <p>Configure your security rover system</p>
+            </div>
+            
+            <div class="settings-grid">
+                <div class="settings-panel">
+                    <h3>Device Configuration</h3>
+                    <div class="form-group">
+                        <label>Device Type</label>
+                        <select id="deviceType">
+                            <option value="esp32">ESP32</option>
+                            <option value="raspberry_pi">Raspberry Pi</option>
                         </select>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- AI Detection Status -->
-        <section class="ai-status">
-            <h3>AI Detection Status</h3>
-            <div class="ai-controls">
-                <div class="ai-toggle">
-                    <label class="switch">
-                        <input type="checkbox" id="aiEnabled">
-                        <span class="slider"></span>
-                    </label>
-                    <span>Enable AI Detection</span>
-                </div>
-                <div class="detection-settings">
-                    <label>
-                        <input type="radio" name="detectionMode" value="animal" checked>
-                        Animal Detection (Low Pitch)
-                    </label>
-                    <label>
-                        <input type="radio" name="detectionMode" value="human">
-                        Human Detection (Siren)
-                    </label>
-                    <label>
-                        <input type="radio" name="detectionMode" value="both">
-                        Both (Continue Surveillance)
-                    </label>
-                </div>
-            </div>
-            <div class="detection-history" id="detectionHistory">
-                <h4>Recent Detections</h4>
-                <div class="detection-list" id="detectionList">
-                    <!-- Detection items will be added here -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Patrol Mode Section -->
-        <section class="patrol-mode">
-            <h3>Patrol Mode</h3>
-            <div class="patrol-controls">
-                <div class="patrol-toggle">
-                    <label class="switch">
-                        <input type="checkbox" id="patrolEnabled">
-                        <span class="slider"></span>
-                    </label>
-                    <span>Enable Patrol Mode</span>
-                </div>
-                <div class="patrol-settings">
-                    <div class="setting-group">
-                        <label for="patrolSpeed">Patrol Speed:</label>
-                        <input type="range" id="patrolSpeed" min="50" max="200" value="100">
-                        <span id="patrolSpeedValue">100</span>
+                    <div class="form-group">
+                        <label>Device IP Address</label>
+                        <input type="text" id="deviceIP" placeholder="192.168.1.100">
                     </div>
-                    <div class="setting-group">
-                        <label for="patrolDuration">Duration (minutes):</label>
-                        <input type="number" id="patrolDuration" min="1" max="120" value="30">
+                    <div class="form-group">
+                        <label>Device Port</label>
+                        <input type="number" id="devicePort" placeholder="80">
                     </div>
-                    <div class="setting-group">
-                        <label for="patrolRoute">Route:</label>
-                        <select id="patrolRoute">
-                            <option value="circular">Circular</option>
-                            <option value="zigzag">Zigzag</option>
-                            <option value="random">Random</option>
-                            <option value="custom">Custom</option>
+                </div>
+                
+                <div class="settings-panel">
+                    <h3>Camera Settings</h3>
+                    <div class="form-group">
+                        <label>Quality</label>
+                        <input type="range" id="cameraQuality" min="0" max="63" value="12">
+                        <span id="qualityValue">12</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Brightness</label>
+                        <input type="range" id="cameraBrightness" min="-2" max="2" value="0">
+                        <span id="brightnessValue">0</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Contrast</label>
+                        <input type="range" id="cameraContrast" min="-2" max="2" value="0">
+                        <span id="contrastValue">0</span>
+                    </div>
+                </div>
+                
+                <div class="settings-panel">
+                    <h3>AI Configuration</h3>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="aiEnabled" checked>
+                            <span class="checkmark"></span>
+                            Enable AI Detection
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Sensitivity</label>
+                        <select id="aiSensitivity">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Detection Types</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="detectPerson" checked>
+                                <span class="checkmark"></span>
+                                Person
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="detectVehicle" checked>
+                                <span class="checkmark"></span>
+                                Vehicle
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="detectAnimal">
+                                <span class="checkmark"></span>
+                                Animal
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <div class="patrol-actions">
-                    <button id="startPatrolBtn" class="btn btn-success">
-                        <i class="fas fa-play"></i> Start Patrol
-                    </button>
-                    <button id="stopPatrolBtn" class="btn btn-danger">
-                        <i class="fas fa-stop"></i> Stop Patrol
-                    </button>
-                    <button id="saveRouteBtn" class="btn btn-info">
-                        <i class="fas fa-save"></i> Save Route
-                    </button>
+                
+                <div class="settings-panel">
+                    <h3>System Settings</h3>
+                    <div class="form-group">
+                        <label>Battery Threshold (%)</label>
+                        <input type="number" id="batteryThreshold" min="10" max="50" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Patrol Speed</label>
+                        <input type="range" id="patrolSpeed" min="10" max="100" value="50">
+                        <span id="patrolSpeedValue">50%</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Auto Return Home</label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoReturn" checked>
+                            <span class="checkmark"></span>
+                            Enable Auto Return
+                        </label>
+                    </div>
                 </div>
             </div>
-            <div class="patrol-status">
-                <div class="status-item">
-                    <i class="fas fa-route"></i>
-                    <span>Route: <span id="currentRoute">None</span></span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-clock"></i>
-                    <span>Time Remaining: <span id="patrolTimeRemaining">00:00</span></span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>Waypoints: <span id="waypointCount">0</span></span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Emergency Controls -->
-        <section class="emergency-controls">
-            <h3>Emergency Controls</h3>
-            <div class="emergency-buttons">
-                <button id="emergencyStopBtn" class="btn btn-danger emergency">
-                    <i class="fas fa-exclamation-triangle"></i> EMERGENCY STOP
+            
+            <div class="settings-actions">
+                <button class="btn btn-primary" id="saveSettings">
+                    <i class="fas fa-save"></i>
+                    Save Settings
                 </button>
-                <button id="restartSystemBtn" class="btn btn-warning">
-                    <i class="fas fa-power-off"></i> Restart System
+                <button class="btn btn-secondary" id="resetSettings">
+                    <i class="fas fa-undo"></i>
+                    Reset to Default
                 </button>
-                <button id="resetSettingsBtn" class="btn btn-secondary">
-                    <i class="fas fa-undo"></i> Reset Settings
+                <button class="btn btn-danger" id="restartSystem">
+                    <i class="fas fa-power-off"></i>
+                    Restart System
                 </button>
             </div>
-        </section>
+        </div>
     </main>
+
+    <!-- Notifications -->
+    <div id="notifications" class="notifications-container"></div>
 
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>Connecting to surveillance car...</p>
+            <div class="loading-spinner"></div>
+            <p>Connecting to Yahmi Security Rover...</p>
         </div>
     </div>
 
-    <!-- Alert Modal -->
-    <div id="alertModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3 id="alertTitle">Alert</h3>
-            <p id="alertMessage">This is an alert message.</p>
-            <button id="alertOk" class="btn btn-primary">OK</button>
-        </div>
-    </div>
-
-    <!-- Detection Alert Modal -->
-    <div id="detectionAlertModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3 id="detectionAlertTitle">Detection Alert</h3>
-            <p id="detectionAlertMessage">A detection has been made!</p>
-            <div class="detection-actions">
-                <button id="playLowPitchBtn" class="btn btn-warning">Play Low Pitch</button>
-                <button id="playSirenBtn" class="btn btn-danger">Play Siren</button>
-                <button id="continueSurveillanceBtn" class="btn btn-success">Continue Surveillance</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/dashboard.js"></script>
-    <script src="js/api-monitor.js"></script>
-    <script src="js/system-logs.js"></script>
-    <script src="js/gemini-ai.js"></script>
-    <script src="js/firebase-integration.js"></script>
-    <script src="js/smtp-notifications.js"></script>
-    <script src="js/telegram-bot.js"></script>
-    <script src="js/simulation.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            authDomain: "yahmi-security-rover.firebaseapp.com",
+            projectId: "yahmi-security-rover",
+            storageBucket: "yahmi-security-rover.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdefghijklmnop"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.firebaseAuth = auth;
+        window.firebaseDB = db;
+        
+        // Authentication state listener
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log('User signed in:', user);
+                // User is signed in
+                document.body.classList.add('authenticated');
+                if (window.yahmiDashboard) {
+                    window.yahmiDashboard.setAuthenticated(true);
+                }
+            } else {
+                console.log('User signed out');
+                // User is signed out
+                document.body.classList.remove('authenticated');
+                if (window.yahmiDashboard) {
+                    window.yahmiDashboard.setAuthenticated(false);
+                }
+                // Redirect to login if not on login page
+                if (!window.location.pathname.includes('login.html')) {
+                    window.location.href = '/login.html';
+                }
+            }
+        });
+        
+        // Firebase authentication functions
+        window.firebaseAuthFunctions = {
+            signIn: async (email, password) => {
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    return { success: true, user: userCredential.user };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            signUp: async (email, password, displayName) => {
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    return { success: true, user: userCredential.user };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            signOut: async () => {
+                try {
+                    await signOut(auth);
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            },
+            
+            getCurrentUser: () => {
+                return auth.currentUser;
+            }
+        };
+    </script>
+    
+    <!-- Scripts -->
+    <script src="js/yahmi-dashboard.js"></script>
+    <script src="js/yahmi-charts.js"></script>
+    <script src="js/yahmi-websocket.js"></script>
+    <script src="js/yahmi-device.js"></script>
+    <script src="js/yahmi-auth.js"></script>
 </body>
 </html>

@@ -1,27 +1,24 @@
-// Firebase Integration for Surveillance Car Data Storage
+// Professional Firebase Integration
+// Handles Firestore database operations and real-time synchronization
+
 class FirebaseIntegration {
     constructor() {
         this.db = null;
         this.auth = null;
-        this.storage = null;
         this.isInitialized = false;
-        this.config = null;
-        
-        // Collections
         this.collections = {
-            detections: 'detections',
-            logs: 'system_logs',
+            detections: 'ai_detections',
             sensorData: 'sensor_data',
             systemStatus: 'system_status',
-            patrolRoutes: 'patrol_routes',
-            mapData: 'map_data',
-            settings: 'settings',
-            notifications: 'notifications'
+            controlCommands: 'control_commands',
+            systemEvents: 'system_events',
+            configurations: 'configurations'
         };
+        this.listeners = new Map();
         
         this.init();
     }
-    
+
     async init() {
         try {
             await this.initializeFirebase();
@@ -29,146 +26,66 @@ class FirebaseIntegration {
             this.isInitialized = true;
             console.log('Firebase integration initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize Firebase:', error);
+            console.error('Firebase integration initialization failed:', error);
             this.showError('Firebase initialization failed: ' + error.message);
         }
     }
-    
+
     async initializeFirebase() {
-        // Check if Firebase is already initialized
-        if (window.firebase && window.firebase.apps.length > 0) {
-            this.db = window.firebase.firestore();
-            this.auth = window.firebase.auth();
-            this.storage = window.firebase.storage();
-            return;
-        }
-        
-        // Load Firebase SDK if not already loaded
-        if (!window.firebase) {
-            await this.loadFirebaseSDK();
-        }
-        
-        // Load Firebase configuration
-        this.config = await this.loadFirebaseConfig();
-        
-        if (!this.config) {
-            console.warn('Firebase configuration not found, using mock data');
-            this.isInitialized = true;
-            return;
-        }
-        
         try {
-            // Initialize Firebase services
-            this.db = window.firebase.firestore();
-            this.auth = window.firebase.auth();
-            this.storage = window.firebase.storage();
-        } catch (error) {
-            console.warn('Firebase services not available, using mock data:', error);
-            this.isInitialized = true;
-            return;
-        }
-        
-        // Configure Firestore settings
-        this.db.settings({
-            cacheSizeBytes: window.firebase.firestore.CACHE_SIZE_UNLIMITED
-        });
-        
-        // Enable offline persistence
-        this.db.enablePersistence({
-            synchronizeTabs: true
-        }).catch((err) => {
-            if (err.code == 'failed-precondition') {
-                console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-            } else if (err.code == 'unimplemented') {
-                console.warn('The current browser does not support all features required for persistence');
-            }
-        });
-    }
-    
-    async loadFirebaseSDK() {
-        return new Promise((resolve, reject) => {
-            // Check if Firebase is already loaded
-            if (window.firebase) {
-                resolve();
-                return;
-            }
-            
-            // Load Firebase SDK
-            const script = document.createElement('script');
-            script.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js';
-            script.onload = () => {
-                const authScript = document.createElement('script');
-                authScript.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js';
-                authScript.onload = () => {
-                    const firestoreScript = document.createElement('script');
-                    firestoreScript.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js';
-                    firestoreScript.onload = () => {
-                        const storageScript = document.createElement('script');
-                        storageScript.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-storage.js';
-                        storageScript.onload = resolve;
-                        storageScript.onerror = reject;
-                        document.head.appendChild(storageScript);
-                    };
-                    firestoreScript.onerror = reject;
-                    document.head.appendChild(firestoreScript);
-                };
-                authScript.onerror = reject;
-                document.head.appendChild(authScript);
+            // Firebase configuration
+            const firebaseConfig = {
+                apiKey: "your-api-key",
+                authDomain: "surveillance-car-project.firebaseapp.com",
+                projectId: "surveillance-car-project",
+                storageBucket: "surveillance-car-project.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "your-app-id"
             };
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-    
-    async loadFirebaseConfig() {
-        try {
-            // Try to load from server first
-            const response = await fetch('/api/firebase/config');
-            if (response.ok) {
-                return await response.json();
+
+            if (typeof firebase !== 'undefined') {
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                this.db = firebase.firestore();
+                this.auth = firebase.auth();
+                
+                console.log('Firebase initialized');
+            } else {
+                throw new Error('Firebase SDK not loaded');
             }
         } catch (error) {
-            console.warn('Could not load Firebase config from server:', error);
+            console.warn('Firebase initialization failed:', error);
+            throw error;
         }
-        
-        // Fallback to localStorage
-        const config = localStorage.getItem('firebase_config');
-        if (config) {
-            return JSON.parse(config);
-        }
-        
-        // Return null to indicate no config available
-        return null;
     }
-    
+
     setupEventListeners() {
-        // Firebase connection status
-        this.db.onSnapshot(() => {
-            this.updateConnectionStatus(true);
-        }, (error) => {
-            this.updateConnectionStatus(false);
-            console.error('Firebase connection error:', error);
-        });
+        // Listen for authentication state changes
+        if (this.auth) {
+            this.auth.onAuthStateChanged((user) => {
+                if (user) {
+                    console.log('User authenticated:', user.uid);
+                } else {
+                    console.log('User not authenticated');
+                }
+            });
+        }
     }
-    
-    // Detection Management
-    async saveDetection(detection) {
+
+    // AI Detection Operations
+    async saveDetection(detectionData) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            if (!this.db) {
-                // Mock save for offline mode
-                const mockId = this.generateId();
-                console.log('Mock detection saved with ID:', mockId);
-                return mockId;
-            }
-            
-            const detectionData = {
-                ...detection,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: new Date().toISOString(),
-                id: detection.id || this.generateId()
-            };
-            
-            const docRef = await this.db.collection(this.collections.detections).add(detectionData);
+            const docRef = await this.db.collection(this.collections.detections).add({
+                ...detectionData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            });
             
             console.log('Detection saved with ID:', docRef.id);
             return docRef.id;
@@ -177,25 +94,19 @@ class FirebaseIntegration {
             throw error;
         }
     }
-    
-    async getDetections(limit = 100, startAfter = null) {
+
+    async getDetections(limit = 50, orderBy = 'timestamp', orderDirection = 'desc') {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            if (!this.db) {
-                // Return mock data for offline mode
-                return this.getMockDetections(limit);
-            }
+            const snapshot = await this.db.collection(this.collections.detections)
+                .orderBy(orderBy, orderDirection)
+                .limit(limit)
+                .get();
             
-            let query = this.db.collection(this.collections.detections)
-                .orderBy('timestamp', 'desc')
-                .limit(limit);
-            
-            if (startAfter) {
-                query = query.startAfter(startAfter);
-            }
-            
-            const snapshot = await query.get();
             const detections = [];
-            
             snapshot.forEach(doc => {
                 detections.push({
                     id: doc.id,
@@ -206,160 +117,67 @@ class FirebaseIntegration {
             return detections;
         } catch (error) {
             console.error('Failed to get detections:', error);
-            // Return mock data on error
-            return this.getMockDetections(limit);
+            throw error;
         }
     }
-    
-    getMockDetections(limit = 100) {
-        const mockDetections = [];
-        const types = ['human', 'animal', 'vehicle', 'object'];
-        const levels = ['high', 'medium', 'low'];
-        
-        for (let i = 0; i < Math.min(limit, 20); i++) {
-            const type = types[Math.floor(Math.random() * types.length)];
-            const confidence = Math.random() * 0.5 + 0.5; // 0.5 to 1.0
-            const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
-            
-            mockDetections.push({
-                id: `mock_${i}`,
-                type: type,
-                confidence: confidence,
-                timestamp: timestamp,
-                createdAt: timestamp.toISOString(),
-                location: {
-                    lat: 40.7128 + (Math.random() - 0.5) * 0.01,
-                    lng: -74.0060 + (Math.random() - 0.5) * 0.01
-                },
-                imageUrl: `https://via.placeholder.com/300x200?text=${type}`,
-                level: levels[Math.floor(Math.random() * levels.length)]
-            });
+
+    async listenToDetections(callback) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
         }
-        
-        return mockDetections.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    }
-    
-    async getDetectionsByType(type, limit = 50) {
-        try {
-            const snapshot = await this.db.collection(this.collections.detections)
-                .where('type', '==', type)
-                .orderBy('timestamp', 'desc')
-                .limit(limit)
-                .get();
-            
-            const detections = [];
-            snapshot.forEach(doc => {
-                detections.push({
-                    id: doc.id,
-                    ...doc.data()
+
+        const listener = this.db.collection(this.collections.detections)
+            .orderBy('timestamp', 'desc')
+            .limit(10)
+            .onSnapshot((snapshot) => {
+                const detections = [];
+                snapshot.forEach(doc => {
+                    detections.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
                 });
+                callback(detections);
+            }, (error) => {
+                console.error('Detection listener error:', error);
             });
-            
-            return detections;
-        } catch (error) {
-            console.error('Failed to get detections by type:', error);
-            throw error;
-        }
+
+        this.listeners.set('detections', listener);
+        return listener;
     }
-    
-    // System Logs Management
-    async saveLog(log) {
-        try {
-            const logData = {
-                ...log,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: new Date().toISOString(),
-                id: log.id || this.generateId()
-            };
-            
-            const docRef = await this.db.collection(this.collections.logs).add(logData);
-            return docRef.id;
-        } catch (error) {
-            console.error('Failed to save log:', error);
-            throw error;
-        }
-    }
-    
-    async getLogs(limit = 100, startAfter = null) {
-        try {
-            let query = this.db.collection(this.collections.logs)
-                .orderBy('timestamp', 'desc')
-                .limit(limit);
-            
-            if (startAfter) {
-                query = query.startAfter(startAfter);
-            }
-            
-            const snapshot = await query.get();
-            const logs = [];
-            
-            snapshot.forEach(doc => {
-                logs.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-            
-            return logs;
-        } catch (error) {
-            console.error('Failed to get logs:', error);
-            throw error;
-        }
-    }
-    
-    async getLogsByLevel(level, limit = 50) {
-        try {
-            const snapshot = await this.db.collection(this.collections.logs)
-                .where('level', '==', level)
-                .orderBy('timestamp', 'desc')
-                .limit(limit)
-                .get();
-            
-            const logs = [];
-            snapshot.forEach(doc => {
-                logs.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-            
-            return logs;
-        } catch (error) {
-            console.error('Failed to get logs by level:', error);
-            throw error;
-        }
-    }
-    
-    // Sensor Data Management
+
+    // Sensor Data Operations
     async saveSensorData(sensorData) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            const data = {
+            const docRef = await this.db.collection(this.collections.sensorData).add({
                 ...sensorData,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 createdAt: new Date().toISOString()
-            };
+            });
             
-            const docRef = await this.db.collection(this.collections.sensorData).add(data);
             return docRef.id;
         } catch (error) {
             console.error('Failed to save sensor data:', error);
             throw error;
         }
     }
-    
-    async getSensorData(limit = 100, startAfter = null) {
+
+    async getSensorData(limit = 100, orderBy = 'timestamp', orderDirection = 'desc') {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            let query = this.db.collection(this.collections.sensorData)
-                .orderBy('timestamp', 'desc')
-                .limit(limit);
+            const snapshot = await this.db.collection(this.collections.sensorData)
+                .orderBy(orderBy, orderDirection)
+                .limit(limit)
+                .get();
             
-            if (startAfter) {
-                query = query.startAfter(startAfter);
-            }
-            
-            const snapshot = await query.get();
             const sensorData = [];
-            
             snapshot.forEach(doc => {
                 sensorData.push({
                     id: doc.id,
@@ -373,316 +191,377 @@ class FirebaseIntegration {
             throw error;
         }
     }
-    
-    // System Status Management
-    async saveSystemStatus(status) {
+
+    async listenToSensorData(callback) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        const listener = this.db.collection(this.collections.sensorData)
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .onSnapshot((snapshot) => {
+                if (!snapshot.empty) {
+                    const doc = snapshot.docs[0];
+                    callback({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                }
+            }, (error) => {
+                console.error('Sensor data listener error:', error);
+            });
+
+        this.listeners.set('sensorData', listener);
+        return listener;
+    }
+
+    // System Status Operations
+    async saveSystemStatus(statusData) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            const statusData = {
-                ...status,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: new Date().toISOString()
-            };
+            const docRef = await this.db.collection(this.collections.systemStatus).add({
+                ...statusData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            });
             
-            // Update the latest system status document
-            await this.db.collection(this.collections.systemStatus).doc('latest').set(statusData);
-            
-            // Also save to history
-            await this.db.collection(this.collections.systemStatus).add(statusData);
-            
-            return true;
+            return docRef.id;
         } catch (error) {
             console.error('Failed to save system status:', error);
             throw error;
         }
     }
-    
+
     async getLatestSystemStatus() {
-        try {
-            const doc = await this.db.collection(this.collections.systemStatus).doc('latest').get();
-            
-            if (doc.exists) {
-                return { id: doc.id, ...doc.data() };
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('Failed to get latest system status:', error);
-            throw error;
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
         }
-    }
-    
-    // Patrol Routes Management
-    async savePatrolRoute(route) {
+
         try {
-            const routeData = {
-                ...route,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: new Date().toISOString(),
-                id: route.id || this.generateId()
-            };
-            
-            const docRef = await this.db.collection(this.collections.patrolRoutes).add(routeData);
-            return docRef.id;
-        } catch (error) {
-            console.error('Failed to save patrol route:', error);
-            throw error;
-        }
-    }
-    
-    async getPatrolRoutes() {
-        try {
-            const snapshot = await this.db.collection(this.collections.patrolRoutes)
-                .orderBy('createdAt', 'desc')
+            const snapshot = await this.db.collection(this.collections.systemStatus)
+                .orderBy('timestamp', 'desc')
+                .limit(1)
                 .get();
             
-            const routes = [];
-            snapshot.forEach(doc => {
-                routes.push({
+            if (!snapshot.empty) {
+                const doc = snapshot.docs[0];
+                return {
                     id: doc.id,
                     ...doc.data()
-                });
+                };
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Failed to get system status:', error);
+            throw error;
+        }
+    }
+
+    async listenToSystemStatus(callback) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        const listener = this.db.collection(this.collections.systemStatus)
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .onSnapshot((snapshot) => {
+                if (!snapshot.empty) {
+                    const doc = snapshot.docs[0];
+                    callback({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                }
+            }, (error) => {
+                console.error('System status listener error:', error);
+            });
+
+        this.listeners.set('systemStatus', listener);
+        return listener;
+    }
+
+    // Control Commands Operations
+    async saveControlCommand(commandData) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const docRef = await this.db.collection(this.collections.controlCommands).add({
+                ...commandData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
             });
             
-            return routes;
-        } catch (error) {
-            console.error('Failed to get patrol routes:', error);
-            throw error;
-        }
-    }
-    
-    // Map Data Management
-    async saveMapData(mapData) {
-        try {
-            const data = {
-                ...mapData,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: new Date().toISOString()
-            };
-            
-            await this.db.collection(this.collections.mapData).doc('current').set(data);
-            return true;
-        } catch (error) {
-            console.error('Failed to save map data:', error);
-            throw error;
-        }
-    }
-    
-    async getMapData() {
-        try {
-            const doc = await this.db.collection(this.collections.mapData).doc('current').get();
-            
-            if (doc.exists) {
-                return { id: doc.id, ...doc.data() };
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('Failed to get map data:', error);
-            throw error;
-        }
-    }
-    
-    // Settings Management
-    async saveSettings(settings) {
-        try {
-            const settingsData = {
-                ...settings,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: new Date().toISOString()
-            };
-            
-            await this.db.collection(this.collections.settings).doc('current').set(settingsData);
-            return true;
-        } catch (error) {
-            console.error('Failed to save settings:', error);
-            throw error;
-        }
-    }
-    
-    async getSettings() {
-        try {
-            const doc = await this.db.collection(this.collections.settings).doc('current').get();
-            
-            if (doc.exists) {
-                return { id: doc.id, ...doc.data() };
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('Failed to get settings:', error);
-            throw error;
-        }
-    }
-    
-    // Notifications Management
-    async saveNotification(notification) {
-        try {
-            const notificationData = {
-                ...notification,
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: new Date().toISOString(),
-                id: notification.id || this.generateId()
-            };
-            
-            const docRef = await this.db.collection(this.collections.notifications).add(notificationData);
             return docRef.id;
         } catch (error) {
-            console.error('Failed to save notification:', error);
+            console.error('Failed to save control command:', error);
             throw error;
         }
     }
-    
-    async getNotifications(limit = 50) {
+
+    async getControlCommands(limit = 50, orderBy = 'timestamp', orderDirection = 'desc') {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            const snapshot = await this.db.collection(this.collections.notifications)
-                .orderBy('timestamp', 'desc')
+            const snapshot = await this.db.collection(this.collections.controlCommands)
+                .orderBy(orderBy, orderDirection)
                 .limit(limit)
                 .get();
             
-            const notifications = [];
+            const commands = [];
             snapshot.forEach(doc => {
-                notifications.push({
+                commands.push({
                     id: doc.id,
                     ...doc.data()
                 });
             });
             
-            return notifications;
+            return commands;
         } catch (error) {
-            console.error('Failed to get notifications:', error);
+            console.error('Failed to get control commands:', error);
             throw error;
         }
     }
-    
-    // Real-time Listeners
-    setupRealtimeListeners() {
-        // Listen for new detections
-        this.db.collection(this.collections.detections)
-            .orderBy('timestamp', 'desc')
-            .limit(1)
-            .onSnapshot((snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added') {
-                        this.handleNewDetection(change.doc.data());
-                    }
+
+    // System Events Operations
+    async saveSystemEvent(eventData) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const docRef = await this.db.collection(this.collections.systemEvents).add({
+                ...eventData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            });
+            
+            return docRef.id;
+        } catch (error) {
+            console.error('Failed to save system event:', error);
+            throw error;
+        }
+    }
+
+    async getSystemEvents(limit = 50, orderBy = 'timestamp', orderDirection = 'desc') {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const snapshot = await this.db.collection(this.collections.systemEvents)
+                .orderBy(orderBy, orderDirection)
+                .limit(limit)
+                .get();
+            
+            const events = [];
+            snapshot.forEach(doc => {
+                events.push({
+                    id: doc.id,
+                    ...doc.data()
                 });
             });
-        
-        // Listen for system status updates
-        this.db.collection(this.collections.systemStatus)
-            .doc('latest')
-            .onSnapshot((doc) => {
-                if (doc.exists) {
-                    this.handleSystemStatusUpdate(doc.data());
+            
+            return events;
+        } catch (error) {
+            console.error('Failed to get system events:', error);
+            throw error;
+        }
+    }
+
+    async listenToSystemEvents(callback) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        const listener = this.db.collection(this.collections.systemEvents)
+            .orderBy('timestamp', 'desc')
+            .limit(10)
+            .onSnapshot((snapshot) => {
+                const events = [];
+                snapshot.forEach(doc => {
+                    events.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                callback(events);
+            }, (error) => {
+                console.error('System events listener error:', error);
+            });
+
+        this.listeners.set('systemEvents', listener);
+        return listener;
+    }
+
+    // Configuration Operations
+    async saveConfiguration(configData) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const docRef = await this.db.collection(this.collections.configurations).add({
+                ...configData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            });
+            
+            return docRef.id;
+        } catch (error) {
+            console.error('Failed to save configuration:', error);
+            throw error;
+        }
+    }
+
+    async getConfigurations() {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const snapshot = await this.db.collection(this.collections.configurations)
+                .orderBy('timestamp', 'desc')
+                .get();
+            
+            const configurations = [];
+            snapshot.forEach(doc => {
+                configurations.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return configurations;
+        } catch (error) {
+            console.error('Failed to get configurations:', error);
+            throw error;
+        }
+    }
+
+    // Analytics and Statistics
+    async getDetectionStats(startDate, endDate) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const snapshot = await this.db.collection(this.collections.detections)
+                .where('timestamp', '>=', startDate)
+                .where('timestamp', '<=', endDate)
+                .get();
+            
+            const stats = {
+                totalDetections: snapshot.size,
+                alertCount: 0,
+                averageConfidence: 0,
+                objectTypes: {},
+                alertLevels: {}
+            };
+            
+            let totalConfidence = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                
+                if (data.should_alert) {
+                    stats.alertCount++;
+                }
+                
+                totalConfidence += data.confidence || 0;
+                
+                // Count object types
+                if (data.detected_objects) {
+                    data.detected_objects.forEach(obj => {
+                        stats.objectTypes[obj] = (stats.objectTypes[obj] || 0) + 1;
+                    });
+                }
+                
+                // Count alert levels
+                const alertLevel = data.alert_level || 'medium';
+                stats.alertLevels[alertLevel] = (stats.alertLevels[alertLevel] || 0) + 1;
+            });
+            
+            stats.averageConfidence = snapshot.size > 0 ? totalConfidence / snapshot.size : 0;
+            
+            return stats;
+        } catch (error) {
+            console.error('Failed to get detection stats:', error);
+            throw error;
+        }
+    }
+
+    async getSystemHealthStats(startDate, endDate) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
+        try {
+            const snapshot = await this.db.collection(this.collections.systemStatus)
+                .where('timestamp', '>=', startDate)
+                .where('timestamp', '<=', endDate)
+                .get();
+            
+            const stats = {
+                totalRecords: snapshot.size,
+                averageBattery: 0,
+                averageUptime: 0,
+                systemErrors: 0,
+                connectionIssues: 0
+            };
+            
+            let totalBattery = 0;
+            let totalUptime = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                
+                totalBattery += data.batteryLevel || 0;
+                totalUptime += data.uptime || 0;
+                
+                if (data.isRunning === false) {
+                    stats.systemErrors++;
+                }
+                
+                if (data.connectedClients === 0) {
+                    stats.connectionIssues++;
                 }
             });
-        
-        // Listen for new logs
-        this.db.collection(this.collections.logs)
-            .orderBy('timestamp', 'desc')
-            .limit(1)
-            .onSnapshot((snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added') {
-                        this.handleNewLog(change.doc.data());
-                    }
-                });
-            });
-    }
-    
-    handleNewDetection(detection) {
-        // Update detection history in UI
-        if (window.dashboard) {
-            window.dashboard.addDetectionToHistory(detection.type, detection.confidence);
-        }
-        
-        // Show detection alert if high priority
-        if (detection.type === 'human' && detection.confidence > 0.8) {
-            this.showDetectionAlert('Human Detected', 
-                `A human has been detected with ${Math.round(detection.confidence * 100)}% confidence.`);
-        }
-    }
-    
-    handleSystemStatusUpdate(status) {
-        // Update system status in UI
-        if (window.dashboard) {
-            window.dashboard.updateSystemStatus(status);
-        }
-    }
-    
-    handleNewLog(log) {
-        // Add new log to system logs
-        if (window.systemLogs) {
-            window.systemLogs.addLog(log.message, log.level, log.source, log.data);
-        }
-    }
-    
-    showDetectionAlert(title, message) {
-        if (window.dashboard) {
-            window.dashboard.showAlert(title, message);
-        }
-    }
-    
-    // File Storage
-    async uploadFile(file, path) {
-        try {
-            const storageRef = this.storage.ref().child(path);
-            const snapshot = await storageRef.put(file);
-            const downloadURL = await snapshot.ref.getDownloadURL();
             
-            return {
-                url: downloadURL,
-                path: path,
-                size: file.size,
-                type: file.type
-            };
+            stats.averageBattery = snapshot.size > 0 ? totalBattery / snapshot.size : 0;
+            stats.averageUptime = snapshot.size > 0 ? totalUptime / snapshot.size : 0;
+            
+            return stats;
         } catch (error) {
-            console.error('Failed to upload file:', error);
+            console.error('Failed to get system health stats:', error);
             throw error;
         }
     }
-    
-    async deleteFile(path) {
+
+    // Data Export
+    async exportData(collection, startDate, endDate) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
-            const storageRef = this.storage.ref().child(path);
-            await storageRef.delete();
-            return true;
-        } catch (error) {
-            console.error('Failed to delete file:', error);
-            throw error;
-        }
-    }
-    
-    // Utility Methods
-    generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
-    }
-    
-    updateConnectionStatus(connected) {
-        const statusElement = document.getElementById('firebaseStatus');
-        if (statusElement) {
-            if (connected) {
-                statusElement.className = 'status-indicator connected';
-                statusElement.querySelector('span').textContent = 'Firebase Connected';
-            } else {
-                statusElement.className = 'status-indicator disconnected';
-                statusElement.querySelector('span').textContent = 'Firebase Disconnected';
+            let query = this.db.collection(collection);
+            
+            if (startDate && endDate) {
+                query = query.where('timestamp', '>=', startDate)
+                           .where('timestamp', '<=', endDate);
             }
-        }
-    }
-    
-    showError(message) {
-        if (window.dashboard) {
-            window.dashboard.showAlert('Firebase Error', message);
-        } else {
-            console.error(message);
-        }
-    }
-    
-    // Data Export/Import
-    async exportData(collection, format = 'json') {
-        try {
-            const snapshot = await this.db.collection(collection).get();
+            
+            const snapshot = await query.get();
             const data = [];
             
             snapshot.forEach(doc => {
@@ -692,78 +571,168 @@ class FirebaseIntegration {
                 });
             });
             
-            if (format === 'json') {
-                return JSON.stringify(data, null, 2);
-            } else if (format === 'csv') {
-                return this.convertToCSV(data);
-            }
-            
             return data;
         } catch (error) {
             console.error('Failed to export data:', error);
             throw error;
         }
     }
-    
-    convertToCSV(data) {
-        if (data.length === 0) return '';
-        
-        const headers = Object.keys(data[0]);
-        const csvContent = [
-            headers.join(','),
-            ...data.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
-        ].join('\n');
-        
-        return csvContent;
-    }
-    
-    // Cleanup old data
-    async cleanupOldData(collection, daysOld = 30) {
+
+    // Cleanup Operations
+    async cleanupOldData(daysToKeep = 30) {
+        if (!this.isInitialized) {
+            throw new Error('Firebase not initialized');
+        }
+
         try {
             const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+            cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
             
-            const snapshot = await this.db.collection(collection)
-                .where('timestamp', '<', cutoffDate)
-                .get();
+            const collections = Object.values(this.collections);
+            const results = {};
             
-            const batch = this.db.batch();
-            snapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
+            for (const collection of collections) {
+                const snapshot = await this.db.collection(collection)
+                    .where('timestamp', '<', cutoffDate)
+                    .get();
+                
+                const batch = this.db.batch();
+                snapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                results[collection] = snapshot.size;
+            }
             
-            await batch.commit();
-            
-            console.log(`Cleaned up ${snapshot.size} old documents from ${collection}`);
-            return snapshot.size;
+            console.log('Cleanup completed:', results);
+            return results;
         } catch (error) {
             console.error('Failed to cleanup old data:', error);
             throw error;
         }
     }
-    
-    // Get connection status
-    isConnected() {
-        return this.isInitialized && this.db !== null;
+
+    // Listener Management
+    removeListener(name) {
+        const listener = this.listeners.get(name);
+        if (listener) {
+            listener();
+            this.listeners.delete(name);
+            console.log(`Listener ${name} removed`);
+        }
     }
-    
-    // Get database instance
-    getDatabase() {
-        return this.db;
+
+    removeAllListeners() {
+        this.listeners.forEach((listener, name) => {
+            listener();
+            console.log(`Listener ${name} removed`);
+        });
+        this.listeners.clear();
     }
-    
-    // Get auth instance
-    getAuth() {
-        return this.auth;
+
+    // Utility Methods
+    showError(message) {
+        console.error('Firebase Error:', message);
+        
+        const notification = document.createElement('div');
+        notification.className = 'notification error';
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            background: #e74c3c;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
     }
-    
-    // Get storage instance
-    getStorage() {
-        return this.storage;
+
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        const colors = {
+            'success': '#27ae60',
+            'error': '#e74c3c',
+            'warning': '#f39c12',
+            'info': '#17a2b8'
+        };
+        notification.style.backgroundColor = colors[type] || colors.info;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+
+    // Public API methods
+    getStatus() {
+        return {
+            isInitialized: this.isInitialized,
+            activeListeners: this.listeners.size,
+            collections: this.collections
+        };
+    }
+
+    async testConnection() {
+        try {
+            if (!this.isInitialized) {
+                throw new Error('Firebase not initialized');
+            }
+            
+            await this.db.collection('test').limit(1).get();
+            return true;
+        } catch (error) {
+            console.error('Firebase connection test failed:', error);
+            return false;
+        }
     }
 }
 
-// Initialize Firebase Integration
+// Initialize Firebase integration when page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.firebaseIntegration = new FirebaseIntegration();
 });
+
+// Add CSS animations
+const firebaseStyle = document.createElement('style');
+firebaseStyle.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .notification {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+`;
+document.head.appendChild(firebaseStyle);

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Configuration - Surveillance Car</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-shield-alt"></i>
+            <span>Surveillance Car</span>
+        </div>
+        <div class="nav-menu">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="wifi-config.html" class="nav-link active">
+                <i class="fas fa-wifi"></i> WiFi Config
+            </a>
+            <a href="settings.html" class="nav-link">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="wifi-config-container">
+            <h1><i class="fas fa-wifi"></i> WiFi Configuration</h1>
+            
+            <!-- Current WiFi Status -->
+            <section class="wifi-status">
+                <h2>Current WiFi Status</h2>
+                <div class="status-card">
+                    <div class="status-item">
+                        <i class="fas fa-wifi"></i>
+                        <span>SSID: <span id="currentSSID">Not Connected</span></span>
+                    </div>
+                    <div class="status-item">
+                        <i class="fas fa-signal"></i>
+                        <span>Signal: <span id="currentSignal">-</span> dBm</span>
+                    </div>
+                    <div class="status-item">
+                        <i class="fas fa-network-wired"></i>
+                        <span>IP: <span id="currentIP">-</span></span>
+                    </div>
+                    <div class="status-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Security: <span id="currentSecurity">-</span></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- WiFi Configuration Form -->
+            <section class="wifi-config-form">
+                <h2>Configure WiFi Network</h2>
+                <form id="wifiConfigForm">
+                    <div class="form-group">
+                        <label for="wifiSSID">WiFi Network Name (SSID)</label>
+                        <input type="text" id="wifiSSID" name="ssid" placeholder="Enter WiFi network name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="wifiPassword">Password</label>
+                        <input type="password" id="wifiPassword" name="password" placeholder="Enter WiFi password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="wifiSecurity">Security Type</label>
+                        <select id="wifiSecurity" name="security">
+                            <option value="WPA2">WPA2</option>
+                            <option value="WPA3">WPA3</option>
+                            <option value="WEP">WEP</option>
+                            <option value="Open">Open (No Password)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deviceName">Device Name</label>
+                        <input type="text" id="deviceName" name="deviceName" value="SurveillanceCar" placeholder="Enter device name">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-wifi"></i> Connect to WiFi
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="scanNetworks()">
+                            <i class="fas fa-search"></i> Scan Networks
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="resetWiFi()">
+                            <i class="fas fa-undo"></i> Reset WiFi
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Available Networks -->
+            <section class="available-networks">
+                <h2>Available Networks</h2>
+                <div class="networks-list" id="networksList">
+                    <div class="loading-networks">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Scanning for networks...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Advanced Settings -->
+            <section class="advanced-settings">
+                <h2>Advanced Settings</h2>
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <label for="staticIP">Use Static IP</label>
+                        <input type="checkbox" id="staticIP" name="staticIP">
+                    </div>
+                    
+                    <div class="setting-group" id="staticIPSettings" style="display: none;">
+                        <label for="ipAddress">IP Address</label>
+                        <input type="text" id="ipAddress" name="ipAddress" placeholder="192.168.1.100">
+                        
+                        <label for="subnetMask">Subnet Mask</label>
+                        <input type="text" id="subnetMask" name="subnetMask" placeholder="255.255.255.0">
+                        
+                        <label for="gateway">Gateway</label>
+                        <input type="text" id="gateway" name="gateway" placeholder="192.168.1.1">
+                        
+                        <label for="dns1">Primary DNS</label>
+                        <input type="text" id="dns1" name="dns1" placeholder="8.8.8.8">
+                        
+                        <label for="dns2">Secondary DNS</label>
+                        <input type="text" id="dns2" name="dns2" placeholder="8.8.4.4">
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label for="autoConnect">Auto-connect on startup</label>
+                        <input type="checkbox" id="autoConnect" name="autoConnect" checked>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label for="hiddenNetwork">Hidden Network</label>
+                        <input type="checkbox" id="hiddenNetwork" name="hiddenNetwork">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Connection Status -->
+            <section class="connection-status">
+                <h2>Connection Status</h2>
+                <div class="status-indicators">
+                    <div class="status-indicator" id="wifiStatus">
+                        <i class="fas fa-wifi"></i>
+                        <span>Disconnected</span>
+                    </div>
+                    <div class="status-indicator" id="internetStatus">
+                        <i class="fas fa-globe"></i>
+                        <span>No Internet</span>
+                    </div>
+                    <div class="status-indicator" id="deviceStatus">
+                        <i class="fas fa-microchip"></i>
+                        <span>Device Offline</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p id="loadingMessage">Connecting to WiFi...</p>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3><i class="fas fa-check-circle"></i> WiFi Connected Successfully!</h3>
+            <p id="successMessage">Your surveillance car is now connected to the WiFi network.</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="goToDashboard()">Go to Dashboard</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Stay Here</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3><i class="fas fa-exclamation-triangle"></i> Connection Failed</h3>
+            <p id="errorMessage">Failed to connect to the WiFi network. Please check your credentials and try again.</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="closeModal()">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/wifi-config.js"></script>
+</body>
+</html>

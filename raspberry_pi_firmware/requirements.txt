@@ -1,0 +1,36 @@
+# Raspberry Pi Surveillance Car Requirements
+# Install with: pip install -r requirements.txt
+
+# Hardware control
+RPi.GPIO>=0.7.0
+gpiozero>=1.6.2
+picamera>=1.13
+
+# Audio processing
+pyaudio>=0.2.11
+numpy>=1.21.0
+
+# Computer vision
+opencv-python>=4.5.0
+
+# Web server
+flask>=2.0.0
+flask-socketio>=5.0.0
+
+# Networking
+requests>=2.25.0
+websocket-client>=1.0.0
+
+# System monitoring
+psutil>=5.8.0
+
+# AI/ML (optional)
+tensorflow>=2.8.0
+opencv-contrib-python>=4.5.0
+
+# Database (optional)
+pymongo>=4.0.0
+
+# Utilities
+python-dotenv>=0.19.0
+schedule>=1.1.0

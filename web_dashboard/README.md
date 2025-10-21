@@ -1,255 +1,300 @@
-# ESP32 Surveillance Car Dashboard
+# Yahmi Security Rover - Complete Dashboard
 
-A comprehensive web dashboard for controlling and monitoring an ESP32-based surveillance car with AI detection, patrol mode, and real-time monitoring.
+A comprehensive security rover management system with advanced features including device testing, mapping, Firebase authentication, and real-time monitoring.
 
-## 🚀 Quick Start
+## 🚀 Features
 
-### Option 1: Using Mock Server (Recommended for Testing)
+### Core Features
+- **Real-time Dashboard**: Live monitoring of rover status, sensors, and performance
+- **Device Control**: Manual and autonomous control of the security rover
+- **Video Streaming**: Live camera feed with recording capabilities
+- **AI Detection**: Advanced object detection and threat analysis
+- **Mapping System**: Interactive area mapping with waypoint management
+- **Device Testing**: Comprehensive device simulation and connection testing
 
-1. **Windows Users:**
-   ```bash
-   # Double-click start-dashboard.bat
-   # OR run in command prompt:
-   start-dashboard.bat
-   ```
+### Authentication & Security
+- **Firebase Authentication**: Secure user login and registration
+- **Role-based Access**: Different permission levels for users
+- **Session Management**: Automatic login state handling
+- **Password Security**: Secure password handling and validation
 
-2. **Linux/Mac Users:**
-   ```bash
-   chmod +x start-dashboard.sh
-   ./start-dashboard.sh
-   ```
+### Advanced Features
+- **MongoDB Integration**: Complete data persistence and analytics
+- **WebSocket Communication**: Real-time data streaming
+- **Chart Visualization**: Performance metrics and trend analysis
+- **Device Simulation**: Test rover functionality without hardware
+- **Route Planning**: Create and manage patrol routes
+- **Alert System**: Comprehensive notification system
 
-3. **Manual Start:**
-   ```bash
-   npm install
-   node mock-server.js
-   ```
+## 📋 Prerequisites
 
-4. **Open Dashboard:**
-   - Navigate to `http://localhost:3000` in your browser
-   - The dashboard will load with mock data and simulated ESP32 responses
+- Node.js 16+ 
+- MongoDB Atlas account (or local MongoDB)
+- Firebase project for authentication
+- ESP32 or Raspberry Pi hardware (optional for simulation)
 
-### Option 2: Direct File Access
+## 🛠️ Installation
 
-1. **Simple HTTP Server:**
-   ```bash
-   # Python 3
-   python -m http.server 8080
-   
-   # Python 2
-   python -m SimpleHTTPServer 8080
-   
-   # Node.js
-   npx http-server -p 8080
-   ```
-
-2. **Open Dashboard:**
-   - Navigate to `http://localhost:8080` in your browser
-
-## 🎯 Features
-
-### ✅ **Completed Features**
-
-- **🎨 Enhanced GUI** - Modern, responsive design with professional styling
-- **📊 Real-time Dashboard** - Live monitoring of car status, sensors, and video feed
-- **🤖 AI Detection** - Gemini AI integration for human/animal detection
-- **🗺️ Interactive Map** - Real-time mapping with patrol routes and waypoints
-- **🚗 Patrol Mode** - Automated surveillance with customizable routes
-- **📧 Notifications** - Email and Telegram alerts for detections
-- **📱 Mobile Responsive** - Works on all devices
-- **🔄 WebSocket Communication** - Real-time data exchange with ESP32
-- **📈 System Monitoring** - API status, logs, and health checks
-- **🎮 Simulation Mode** - Test all features without physical hardware
-- **⚡ Emergency Controls** - Emergency stop and system restart
-- **💾 Data Storage** - Firebase integration for data persistence
-
-### 🔧 **Technical Features**
-
-- **Firebase Integration** - Cloud database for data storage
-- **SMTP Notifications** - Email alerts for important events
-- **Telegram Bot** - Instant messaging alerts
-- **API Monitoring** - Real-time API health checks
-- **System Logs** - Comprehensive logging system
-- **Mock Server** - Development and testing without hardware
-- **Error Handling** - Robust error handling and fallbacks
-- **Offline Support** - Works without internet connection
-
-## 📁 Project Structure
-
-```
-web_dashboard/
-├── index.html              # Main dashboard page
-├── settings.html           # Settings configuration
-├── logs.html              # System logs viewer
-├── map.html               # Interactive map
-├── detections.html        # Detection history
-├── css/
-│   ├── style.css         # Main stylesheet
-│   └── map.css           # Map-specific styles
-├── js/
-│   ├── dashboard.js      # Main dashboard logic
-│   ├── api-monitor.js    # API monitoring
-│   ├── system-logs.js    # Log management
-│   ├── gemini-ai.js      # AI integration
-│   ├── firebase-integration.js # Database
-│   ├── smtp-notifications.js   # Email alerts
-│   ├── telegram-bot.js   # Telegram integration
-│   ├── simulation.js     # Simulation system
-│   ├── interactive-map.js # Map functionality
-│   ├── settings.js       # Settings management
-│   └── detections.js     # Detection management
-├── aws-deployment/        # AWS deployment files
-├── mock-server.js        # Mock API server
-├── package.json          # Dependencies
-├── start-dashboard.bat   # Windows startup script
-├── start-dashboard.sh    # Linux/Mac startup script
-└── README.md            # This file
+### 1. Clone and Setup
+```bash
+cd web_dashboard
+npm install
 ```
 
-## 🎮 Dashboard Controls
+### 2. Environment Configuration
+Copy `env.example` to `.env` and configure:
 
-### **Main Controls**
-- **Movement** - Arrow keys or on-screen buttons
-- **Speed Control** - Adjustable speed slider
-- **Camera Settings** - Quality, brightness, contrast
-- **Mode Selection** - Manual, Patrol, Surveillance
+```env
+# MongoDB Configuration
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/yahmi-rover
 
-### **Patrol Mode**
-- **Route Types** - Circular, Zigzag, Random, Custom
-- **Duration** - Set patrol time (1-120 minutes)
-- **Speed** - Adjustable patrol speed
-- **Waypoints** - Save and load custom routes
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key
+JWT_REFRESH_SECRET=your_refresh_secret_key
 
-### **Emergency Controls**
-- **Emergency Stop** - Immediately stop all movement
-- **System Restart** - Restart ESP32 remotely
-- **Settings Reset** - Reset to default configuration
+# Firebase Configuration
+FIREBASE_API_KEY=your_firebase_api_key
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+FIREBASE_MESSAGING_SENDER_ID=123456789012
+FIREBASE_APP_ID=1:123456789012:web:abcdefghijklmnop
 
-### **AI Detection**
-- **Detection Types** - Human, Animal, Vehicle, Object
-- **Confidence Levels** - Adjustable sensitivity
-- **Alert Actions** - Sound alerts, notifications, recording
+# Device Configuration
+ESP32_IP=192.168.1.100
+RASPBERRY_PI_IP=192.168.1.101
 
-## 🔧 Configuration
+# AI Configuration
+GEMINI_API_KEY=your_gemini_api_key
 
-### **ESP32 Settings**
-```javascript
-// Default ESP32 connection settings
-const esp32IP = '192.168.1.100';
-const esp32Port = '81';
+# Email Configuration (Optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
 ```
 
-### **Firebase Configuration**
-```javascript
-// Firebase config (set in settings)
-const firebaseConfig = {
-    apiKey: "your-api-key",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "your-app-id"
-};
+### 3. Firebase Setup
+1. Create a Firebase project at https://console.firebase.google.com
+2. Enable Authentication with Email/Password
+3. Update the Firebase configuration in `index.html` and `login.html`
+4. Set up Firestore database (optional)
+
+### 4. MongoDB Setup
+1. Create a MongoDB Atlas account
+2. Create a new cluster
+3. Get your connection string
+4. Update `MONGODB_URI` in `.env`
+
+## 🚀 Running the Application
+
+### Windows
+```bash
+start-dashboard.bat
 ```
 
-### **SMTP Settings**
-```javascript
-// Email notification settings
-const smtpConfig = {
-    host: "smtp.gmail.com",
-    port: 587,
-    user: "your-email@gmail.com",
-    pass: "your-app-password"
-};
+### Linux/Mac
+```bash
+./start-dashboard.sh
 ```
 
-### **Telegram Bot**
-```javascript
-// Telegram bot configuration
-const telegramConfig = {
-    botToken: "your-bot-token",
-    chatId: "your-chat-id"
-};
+### Manual Start
+```bash
+node server.js
 ```
+
+## 📱 Usage
+
+### 1. Access the Dashboard
+- Open browser to `http://localhost:3000`
+- Login page: `http://localhost:3000/login.html`
+
+### 2. Authentication
+- **Login**: Use existing credentials
+- **Register**: Create new account
+- **Reset Password**: Password recovery (simulation)
+
+### 3. Dashboard Features
+
+#### Main Dashboard
+- **System Status**: Real-time rover status
+- **Sensor Data**: IR sensors, distance, battery
+- **Performance Charts**: CPU, memory, and system metrics
+- **Recent Activity**: System events and logs
+
+#### Control Panel
+- **Movement Control**: Manual rover control
+- **Camera Feed**: Live video streaming
+- **Audio Controls**: Alert sounds and notifications
+- **Mode Selection**: Manual/Autonomous operation
+
+#### Analytics & Reports
+- **Device Testing**: Test connections and simulate devices
+- **Mapping System**: Create and manage patrol routes
+- **Performance Analytics**: Detailed system metrics
+- **Detection Trends**: AI detection analysis
+
+#### Settings
+- **Device Configuration**: ESP32/Raspberry Pi settings
+- **User Management**: Account settings and permissions
+- **System Configuration**: Advanced system settings
+
+## 🔧 Device Integration
+
+### ESP32 Firmware
+The ESP32 firmware provides:
+- REST API endpoints for control
+- Real-time sensor data
+- Camera streaming
+- Audio generation
+- Motor control
+
+### Raspberry Pi Firmware
+The Raspberry Pi firmware includes:
+- Flask web server
+- Camera streaming
+- Audio processing
+- System monitoring
+- GPIO control
+
+## 🗺️ Mapping System
+
+### Features
+- **Interactive Map**: Click to add waypoints
+- **Route Planning**: Create patrol routes
+- **Area Mapping**: SLAM-based area exploration
+- **Waypoint Management**: Add, edit, delete waypoints
+
+### Usage
+1. Click "Start Mapping" to begin area exploration
+2. Add waypoints by clicking on the map
+3. Create routes by connecting waypoints
+4. Save and load map data
+
+## 🧪 Device Testing
+
+### Simulation Features
+- **Device Status**: Real-time connection status
+- **Connection Testing**: Test ESP32 and Raspberry Pi connections
+- **Test Results**: Detailed test logs and results
+- **Simulation Mode**: Test without physical hardware
+
+### Testing Process
+1. Click "Start Simulation" to begin testing
+2. Use "Test Connection" to verify device connectivity
+3. Monitor test results in real-time
+4. Stop simulation when complete
+
+## 📊 Analytics & Monitoring
+
+### Performance Metrics
+- **CPU Usage**: Real-time processor utilization
+- **Memory Usage**: RAM consumption tracking
+- **Network Status**: Connection quality monitoring
+- **Battery Level**: Power management
+
+### Detection Analytics
+- **Object Detection**: AI-powered threat identification
+- **Motion Detection**: Movement analysis
+- **Alert Trends**: Security incident patterns
+- **Performance Reports**: System efficiency metrics
+
+## 🔐 Security Features
+
+### Authentication
+- **Firebase Integration**: Secure user authentication
+- **Session Management**: Automatic login state handling
+- **Password Security**: Encrypted password storage
+- **Role-based Access**: Permission-based feature access
+
+### Data Protection
+- **MongoDB Security**: Encrypted data storage
+- **API Security**: Rate limiting and validation
+- **CORS Protection**: Cross-origin request security
+- **Input Validation**: Data sanitization
 
 ## 🚨 Troubleshooting
 
-### **Common Issues**
+### Common Issues
 
-1. **WebSocket Connection Failed**
-   - Check ESP32 IP address in settings
-   - Verify ESP32 is running and accessible
-   - Check firewall settings
+#### Connection Problems
+- Check device IP addresses in `.env`
+- Verify network connectivity
+- Ensure devices are powered on
 
-2. **Firebase Errors**
-   - Verify Firebase configuration
-   - Check internet connection
-   - Ensure Firebase project is set up correctly
+#### Authentication Issues
+- Verify Firebase configuration
+- Check Firebase project settings
+- Ensure authentication is enabled
 
-3. **AI Detection Not Working**
-   - Check Gemini API key
-   - Verify internet connection
-   - Check browser console for errors
+#### Database Issues
+- Verify MongoDB connection string
+- Check network connectivity to MongoDB Atlas
+- Ensure database permissions are correct
 
-4. **Video Stream Not Loading**
-   - Check ESP32 camera module
-   - Verify video stream URL
-   - Check network connectivity
-
-### **Debug Mode**
-
-Enable debug mode by opening browser console (F12) and checking for error messages.
-
-## 📱 Mobile Usage
-
-The dashboard is fully responsive and works on:
-- **Smartphones** - Touch controls for movement
-- **Tablets** - Optimized layout for larger screens
-- **Desktop** - Full feature set with keyboard shortcuts
-
-## 🔒 Security Features
-
-- **HTTPS Support** - Secure connections
-- **Input Validation** - All inputs are validated
-- **Error Handling** - Graceful error handling
-- **Access Control** - Configurable access restrictions
-
-## 🚀 Deployment
-
-### **Local Development**
-```bash
-# Start mock server
-node mock-server.js
-
-# Or use Python
-python -m http.server 8080
+### Debug Mode
+Enable debug logging by setting:
+```env
+DEBUG=true
+NODE_ENV=development
 ```
 
-### **Production Deployment**
-See `aws-deployment/` folder for AWS deployment instructions.
+## 📈 Performance Optimization
+
+### Server Optimization
+- **Compression**: Gzip compression enabled
+- **Caching**: Static file caching
+- **Rate Limiting**: API request limiting
+- **Connection Pooling**: Database connection optimization
+
+### Client Optimization
+- **Lazy Loading**: On-demand resource loading
+- **Image Optimization**: Compressed images and videos
+- **Code Splitting**: Modular JavaScript loading
+- **Caching**: Browser caching strategies
+
+## 🔄 Updates and Maintenance
+
+### Regular Maintenance
+- **Database Cleanup**: Remove old logs and data
+- **Security Updates**: Keep dependencies updated
+- **Performance Monitoring**: Monitor system metrics
+- **Backup Management**: Regular data backups
+
+### Version Updates
+```bash
+npm update
+npm audit fix
+```
 
 ## 📞 Support
 
-For issues and questions:
-1. Check the troubleshooting section
-2. Review browser console for errors
-3. Check ESP32 serial output
-4. Verify network connectivity
-
-## 🎯 Next Steps
-
-1. **Connect Real ESP32** - Replace mock server with actual ESP32
-2. **Configure Firebase** - Set up your Firebase project
-3. **Set up Notifications** - Configure email and Telegram
-4. **Customize Settings** - Adjust to your specific needs
-5. **Test Features** - Use simulation mode to test all features
+For technical support and questions:
+- **Documentation**: Check this README and inline comments
+- **Issues**: Report bugs and feature requests
+- **Community**: Join the Yahmi Security Rover community
 
 ## 📄 License
 
-MIT License - See LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 🎯 Roadmap
+
+### Upcoming Features
+- **Mobile App**: React Native mobile application
+- **Advanced AI**: Enhanced object detection
+- **Cloud Integration**: AWS/Azure deployment options
+- **Multi-device Support**: Multiple rover management
+- **Advanced Analytics**: Machine learning insights
 
 ---
 
-**🎉 Your ESP32 Surveillance Car Dashboard is ready to use!**
-
-Start with the mock server to test all features, then connect your real ESP32 for live operation.
+**Yahmi Security Rover** - Advanced security monitoring and control system

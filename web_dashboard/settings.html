@@ -8,563 +8,139 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-brand">
-            <i class="fas fa-car"></i>
+            <i class="fas fa-shield-alt"></i>
             <span>Surveillance Car</span>
         </div>
         <div class="nav-menu">
-            <a href="index.html" class="nav-link">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
-            </a>
-            <a href="settings.html" class="nav-link active">
-                <i class="fas fa-cog"></i> Settings
-            </a>
-            <a href="logs.html" class="nav-link">
-                <i class="fas fa-file-alt"></i> Logs
-            </a>
-            <a href="map.html" class="nav-link">
-                <i class="fas fa-map"></i> Map
-            </a>
-            <a href="detections.html" class="nav-link">
-                <i class="fas fa-eye"></i> Detections
-            </a>
-        </div>
-        <div class="nav-status">
-            <div class="status-indicator" id="connectionStatus">
-                <i class="fas fa-wifi"></i>
-                <span>Connecting...</span>
-            </div>
-            <div class="status-indicator" id="batteryStatus">
-                <i class="fas fa-battery-full"></i>
-                <span>0%</span>
-            </div>
+            <a href="index.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="wifi-config.html" class="nav-link"><i class="fas fa-wifi"></i> WiFi Config</a>
+            <a href="settings.html" class="nav-link active"><i class="fas fa-cog"></i> Settings</a>
+            <a href="logs.html" class="nav-link"><i class="fas fa-file-alt"></i> Logs</a>
+            <a href="map.html" class="nav-link"><i class="fas fa-map"></i> Map</a>
+            <a href="detections.html" class="nav-link"><i class="fas fa-eye"></i> Detections</a>
         </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="main-content">
-        <div class="settings-container">
-            <!-- Header -->
-            <div class="settings-header">
-                <h1><i class="fas fa-cog"></i> System Settings</h1>
-                <div class="settings-actions">
-                    <button id="saveAllSettingsBtn" class="btn btn-success">
-                        <i class="fas fa-save"></i> Save All Settings
-                    </button>
-                    <button id="resetSettingsBtn" class="btn btn-warning">
-                        <i class="fas fa-undo"></i> Reset to Default
-                    </button>
-                    <button id="exportSettingsBtn" class="btn btn-info">
-                        <i class="fas fa-download"></i> Export Settings
-                    </button>
-                    <button id="importSettingsBtn" class="btn btn-secondary">
-                        <i class="fas fa-upload"></i> Import Settings
-                    </button>
+        <section class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-cog"></i> Configuration</h2>
+                <div>
+                    <button id="refreshBtn" class="btn btn-secondary"><i class="fas fa-sync"></i> Refresh</button>
+                    <button id="saveBtn" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
                 </div>
             </div>
-
-            <!-- Settings Tabs -->
-            <div class="settings-tabs">
-                <button class="tab-btn active" data-tab="general">
-                    <i class="fas fa-cog"></i> General
-                </button>
-                <button class="tab-btn" data-tab="ai">
-                    <i class="fas fa-brain"></i> AI Detection
-                </button>
-                <button class="tab-btn" data-tab="notifications">
-                    <i class="fas fa-bell"></i> Notifications
-                </button>
-                <button class="tab-btn" data-tab="network">
-                    <i class="fas fa-wifi"></i> Network
-                </button>
-                <button class="tab-btn" data-tab="camera">
-                    <i class="fas fa-camera"></i> Camera
-                </button>
-                <button class="tab-btn" data-tab="sensors">
-                    <i class="fas fa-microchip"></i> Sensors
-                </button>
-                <button class="tab-btn" data-tab="patrol">
-                    <i class="fas fa-route"></i> Patrol
-                </button>
-                <button class="tab-btn" data-tab="security">
-                    <i class="fas fa-shield-alt"></i> Security
-                </button>
-            </div>
-
-            <!-- General Settings -->
-            <div id="general" class="settings-tab-content active">
-                <div class="settings-card">
-                    <h3><i class="fas fa-cog"></i> General Settings</h3>
-                    
-                    <div class="form-group">
-                        <label for="systemName">System Name:</label>
-                        <input type="text" id="systemName" placeholder="Surveillance Car">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="systemVersion">System Version:</label>
-                        <input type="text" id="systemVersion" value="1.0.0" readonly>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="timezone">Timezone:</label>
-                        <select id="timezone">
-                            <option value="UTC">UTC</option>
-                            <option value="America/New_York">Eastern Time</option>
-                            <option value="America/Chicago">Central Time</option>
-                            <option value="America/Denver">Mountain Time</option>
-                            <option value="America/Los_Angeles">Pacific Time</option>
-                            <option value="Europe/London">London</option>
-                            <option value="Europe/Paris">Paris</option>
-                            <option value="Asia/Tokyo">Tokyo</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="language">Language:</label>
-                        <select id="language">
-                            <option value="en">English</option>
-                            <option value="es">Spanish</option>
-                            <option value="fr">French</option>
-                            <option value="de">German</option>
-                            <option value="zh">Chinese</option>
-                            <option value="ja">Japanese</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="autoStart">
-                            Auto-start system on boot
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="enableLogging">
-                            Enable system logging
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI Detection Settings -->
-            <div id="ai" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-brain"></i> AI Detection Settings</h3>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="aiEnabled">
-                            Enable AI Detection
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="aiProvider">AI Provider:</label>
-                        <select id="aiProvider">
-                            <option value="gemini">Google Gemini</option>
-                            <option value="openai">OpenAI</option>
-                            <option value="custom">Custom API</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="aiApiKey">API Key:</label>
-                        <input type="password" id="aiApiKey" placeholder="Enter your AI API key">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="confidenceThreshold">Confidence Threshold:</label>
-                        <input type="range" id="confidenceThreshold" min="0.1" max="1.0" step="0.1" value="0.7">
-                        <span id="confidenceValue">70%</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Detection Types:</label>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" id="enableHumanDetection" checked>
-                                Human Detection
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableAnimalDetection" checked>
-                                Animal Detection
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableVehicleDetection">
-                                Vehicle Detection
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableObjectDetection">
-                                Object Detection
-                            </label>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-title">Device</div>
+                        <div class="form-group">
+                            <label>Device Type</label>
+                            <select id="deviceType">
+                                <option value="esp32">ESP32</option>
+                                <option value="raspberry_pi">Raspberry Pi</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Device IP</label>
+                            <input id="deviceIp" type="text" placeholder="192.168.1.100">
+                        </div>
+                        <div class="form-group">
+                            <label>Device Port</label>
+                            <input id="devicePort" type="number" placeholder="80">
                         </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="detectionInterval">Detection Interval (seconds):</label>
-                        <input type="number" id="detectionInterval" min="1" max="60" value="5">
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-title">Camera</div>
+                        <div class="form-group">
+                            <label>Quality</label>
+                            <input id="cameraQuality" type="number" min="0" max="63">
+                        </div>
+                        <div class="form-group">
+                            <label>Resolution</label>
+                            <input id="cameraResolution" type="text" placeholder="640x480">
+                        </div>
+                        <div class="form-group">
+                            <label>FPS</label>
+                            <input id="cameraFps" type="number" min="1" max="60">
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Notifications Settings -->
-            <div id="notifications" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-bell"></i> Email Notifications</h3>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="emailEnabled">
-                            Enable Email Notifications
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="smtpHost">SMTP Host:</label>
-                        <input type="text" id="smtpHost" placeholder="smtp.gmail.com">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="smtpPort">SMTP Port:</label>
-                        <input type="number" id="smtpPort" value="587">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="smtpUser">SMTP Username:</label>
-                        <input type="text" id="smtpUser" placeholder="your-email@gmail.com">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="smtpPassword">SMTP Password:</label>
-                        <input type="password" id="smtpPassword" placeholder="Your email password">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="smtpSecure">
-                            Use SSL/TLS
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="emailFrom">From Email:</label>
-                        <input type="email" id="emailFrom" placeholder="surveillance@yourdomain.com">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="emailFromName">From Name:</label>
-                        <input type="text" id="emailFromName" value="Surveillance Car">
-                    </div>
-                    
-                    <div class="form-group">
-                        <button id="testEmailBtn" class="btn btn-secondary">
-                            <i class="fas fa-paper-plane"></i> Test Email
-                        </button>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-title">AI</div>
+                        <div class="form-group">
+                            <label>Enable AI</label>
+                            <input id="aiEnabled" type="checkbox">
+                        </div>
+                        <div class="form-group">
+                            <label>Sensitivity</label>
+                            <select id="aiSensitivity">
+                                <option value="low">low</option>
+                                <option value="medium">medium</option>
+                                <option value="high">high</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="settings-card">
-                    <h3><i class="fab fa-telegram"></i> Telegram Notifications</h3>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="telegramEnabled">
-                            Enable Telegram Notifications
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="botToken">Bot Token:</label>
-                        <input type="password" id="botToken" placeholder="Your bot token">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="chatId">Chat ID:</label>
-                        <input type="text" id="chatId" placeholder="Your chat ID">
-                    </div>
-                    
-                    <div class="form-group">
-                        <button id="testTelegramBtn" class="btn btn-secondary">
-                            <i class="fas fa-paper-plane"></i> Test Telegram
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="settings-card">
-                    <h3><i class="fas fa-bell"></i> Notification Settings</h3>
-                    
-                    <div class="form-group">
-                        <label>Notification Types:</label>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" id="enableTelegramHumanAlerts" checked>
-                                Human Detection Alerts
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableTelegramAnimalAlerts" checked>
-                                Animal Detection Alerts
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableTelegramSystemAlerts" checked>
-                                System Alerts
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableTelegramBatteryAlerts" checked>
-                                Battery Low Alerts
-                            </label>
-                            <label>
-                                <input type="checkbox" id="enableTelegramConnectionAlerts" checked>
-                                Connection Lost Alerts
-                            </label>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-title">System</div>
+                        <div class="form-group">
+                            <label>Battery Threshold (%)</label>
+                            <input id="batteryThreshold" type="number" min="0" max="100">
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Network Settings -->
-            <div id="network" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-wifi"></i> Network Settings</h3>
-                    
-                    <div class="form-group">
-                        <label for="wifiSSID">WiFi SSID:</label>
-                        <input type="text" id="wifiSSID" placeholder="Your WiFi network name">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="wifiPassword">WiFi Password:</label>
-                        <input type="password" id="wifiPassword" placeholder="Your WiFi password">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="hostname">Hostname:</label>
-                        <input type="text" id="hostname" value="surveillance-car">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="port">Web Server Port:</label>
-                        <input type="number" id="port" value="80">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="websocketPort">WebSocket Port:</label>
-                        <input type="number" id="websocketPort" value="81">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Camera Settings -->
-            <div id="camera" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-camera"></i> Camera Settings</h3>
-                    
-                    <div class="form-group">
-                        <label for="cameraResolution">Resolution:</label>
-                        <select id="cameraResolution">
-                            <option value="320x240">320x240 (QVGA)</option>
-                            <option value="640x480">640x480 (VGA)</option>
-                            <option value="800x600">800x600 (SVGA)</option>
-                            <option value="1024x768">1024x768 (XGA)</option>
-                            <option value="1280x720">1280x720 (HD)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cameraQuality">Quality:</label>
-                        <input type="range" id="cameraQuality" min="0" max="63" value="12">
-                        <span id="cameraQualityValue">12</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cameraBrightness">Brightness:</label>
-                        <input type="range" id="cameraBrightness" min="-2" max="2" value="0">
-                        <span id="cameraBrightnessValue">0</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cameraContrast">Contrast:</label>
-                        <input type="range" id="cameraContrast" min="-2" max="2" value="0">
-                        <span id="cameraContrastValue">0</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cameraSaturation">Saturation:</label>
-                        <input type="range" id="cameraSaturation" min="-2" max="2" value="0">
-                        <span id="cameraSaturationValue">0</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cameraFrameRate">Frame Rate (FPS):</label>
-                        <input type="number" id="cameraFrameRate" min="1" max="30" value="15">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sensors Settings -->
-            <div id="sensors" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-microchip"></i> Sensor Settings</h3>
-                    
-                    <div class="form-group">
-                        <label for="sensorUpdateInterval">Update Interval (ms):</label>
-                        <input type="number" id="sensorUpdateInterval" min="100" max="5000" value="1000">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="ultrasonicThreshold">Ultrasonic Threshold (cm):</label>
-                        <input type="number" id="ultrasonicThreshold" min="5" max="400" value="50">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="irThreshold">IR Sensor Threshold:</label>
-                        <input type="number" id="irThreshold" min="0" max="1024" value="512">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="batteryLowThreshold">Battery Low Threshold (%):</label>
-                        <input type="number" id="batteryLowThreshold" min="5" max="50" value="20">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="batteryCriticalThreshold">Battery Critical Threshold (%):</label>
-                        <input type="number" id="batteryCriticalThreshold" min="1" max="20" value="5">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Patrol Settings -->
-            <div id="patrol" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-route"></i> Patrol Settings</h3>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="patrolEnabled">
-                            Enable Patrol Mode
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="patrolSpeed">Patrol Speed:</label>
-                        <input type="range" id="patrolSpeed" min="50" max="255" value="150">
-                        <span id="patrolSpeedValue">150</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="patrolInterval">Patrol Interval (minutes):</label>
-                        <input type="number" id="patrolInterval" min="5" max="120" value="30">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="patrolTimeout">Patrol Timeout (minutes):</label>
-                        <input type="number" id="patrolTimeout" min="10" max="180" value="60">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="patrolReturnHome">
-                            Return to home position after patrol
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="patrolAvoidObstacles">
-                            Avoid obstacles during patrol
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Security Settings -->
-            <div id="security" class="settings-tab-content">
-                <div class="settings-card">
-                    <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="enableAuthentication">
-                            Enable Authentication
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="username">Username:</label>
-                        <input type="text" id="username" placeholder="admin">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="password">Password:</label>
-                        <input type="password" id="password" placeholder="Enter password">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="sessionTimeout">Session Timeout (minutes):</label>
-                        <input type="number" id="sessionTimeout" min="5" max="480" value="30">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="enableHTTPS">
-                            Enable HTTPS
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="apiKey">API Key:</label>
-                        <input type="text" id="apiKey" placeholder="Generate API key">
-                        <button id="generateApiKeyBtn" class="btn btn-secondary btn-sm">
-                            Generate
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
     </main>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-content">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>Loading settings...</p>
-        </div>
-    </div>
+    <script>
+    function setVal(id, v) { const el = document.getElementById(id); if (el == null) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? ''; }
+    function getVal(id) { const el = document.getElementById(id); if (el == null) return undefined; return el.type === 'checkbox' ? el.checked : el.value; }
 
-    <!-- Alert Modal -->
-    <div id="alertModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3 id="alertTitle">Alert</h3>
-            <p id="alertMessage">This is an alert message.</p>
-            <button id="alertOk" class="btn btn-primary">OK</button>
-        </div>
-    </div>
+    async function loadConfig() {
+        const res = await fetch('/api/config');
+        const cfg = await res.json();
+        setVal('deviceType', cfg.device_type || cfg.DEFAULT_DEVICE_TYPE || 'esp32');
+        setVal('deviceIp', cfg.device_ip || cfg.DEFAULT_DEVICE_IP || '192.168.1.100');
+        setVal('devicePort', cfg.device_port || cfg.DEFAULT_DEVICE_PORT || 80);
+        setVal('cameraQuality', cfg.camera_quality || cfg.CAMERA_QUALITY || 12);
+        setVal('cameraResolution', cfg.CAMERA_RESOLUTION || '640x480');
+        setVal('cameraFps', cfg.CAMERA_FPS || 30);
+        setVal('aiEnabled', cfg.ai_enabled ?? (cfg.AI_DETECTION_ENABLED ?? true));
+        setVal('aiSensitivity', cfg.AI_SENSITIVITY || 'medium');
+        setVal('batteryThreshold', cfg.battery_threshold || 20);
+    }
 
-    <!-- Import Settings Modal -->
-    <div id="importSettingsModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3>Import Settings</h3>
-            <div class="form-group">
-                <label for="settingsFile">Select Settings File:</label>
-                <input type="file" id="settingsFile" accept=".json">
-            </div>
-            <div class="form-actions">
-                <button id="importSettingsConfirmBtn" class="btn btn-primary">Import</button>
-                <button id="importSettingsCancelBtn" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
+    async function saveConfig() {
+        const updates = [
+            { name: 'device_type', value: getVal('deviceType'), type: 'string', category: 'system' },
+            { name: 'device_ip', value: getVal('deviceIp'), type: 'string', category: 'network' },
+            { name: 'device_port', value: Number(getVal('devicePort')), type: 'number', category: 'network' },
+            { name: 'camera_quality', value: Number(getVal('cameraQuality')), type: 'number', category: 'camera' },
+            { name: 'CAMERA_RESOLUTION', value: getVal('cameraResolution'), type: 'string', category: 'camera' },
+            { name: 'CAMERA_FPS', value: Number(getVal('cameraFps')), type: 'number', category: 'camera' },
+            { name: 'ai_enabled', value: !!getVal('aiEnabled'), type: 'boolean', category: 'ai' },
+            { name: 'AI_SENSITIVITY', value: getVal('aiSensitivity'), type: 'string', category: 'ai' },
+            { name: 'battery_threshold', value: Number(getVal('batteryThreshold')), type: 'number', category: 'system' }
+        ];
+        for (const u of updates) {
+            await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u) });
+        }
+        alert('Configuration saved');
+    }
 
-    <script src="js/dashboard.js"></script>
-    <script src="js/smtp-notifications.js"></script>
-    <script src="js/telegram-bot.js"></script>
-    <script src="js/gemini-ai.js"></script>
-    <script src="js/firebase-integration.js"></script>
-    <script src="js/settings.js"></script>
+    document.getElementById('refreshBtn').addEventListener('click', loadConfig);
+    document.getElementById('saveBtn').addEventListener('click', saveConfig);
+    loadConfig();
+    </script>
 </body>
 </html>
+
+
