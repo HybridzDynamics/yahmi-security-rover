@@ -438,16 +438,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Hardware Setup](docs/hardware.md)
 - [Troubleshooting Guide](docs/troubleshooting.md)
 
-### Community
-- [GitHub Issues](https://github.com/your-username/surveillance-car/issues)
-- [Discord Server](https://discord.gg/your-server)
-- [Email Support](mailto:support@surveillance-car.com)
-
-### Professional Support
-For enterprise support and custom development, contact:
-- Email: enterprise@surveillance-car.com
-- Phone: +1 (555) 123-4567
-
 ## 🙏 Acknowledgments
 
 - **Google AI**: Gemini AI integration
