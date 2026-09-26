@@ -4,6 +4,7 @@
  * Compatible with web dashboard and mobile app
  */
 
+ #include "version.h"
  #include <WiFi.h>
  #include <WebServer.h>
  #include <WebSocketsServer.h>

@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  dashboard:
+    image: yahmi/security-rover-web:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yahmi-rover-dashboard-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/yahmi_security_rover?authSource=admin
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - prod_uploads:/app/uploads
+      - prod_recordings:/app/recordings
+      - prod_logs:/app/logs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - yahmi-prod-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  mongodb:
+    image: mongo:6.0
+    container_name: yahmi-rover-mongodb-prod
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_DATABASE=yahmi_security_rover
+    volumes:
+      - prod_mongo_data:/data/db
+    networks:
+      - yahmi-prod-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: yahmi-rover-redis-prod
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - prod_redis_data:/data
+    networks:
+      - yahmi-prod-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+networks:
+  yahmi-prod-network:
+    driver: bridge
+
+volumes:
+  prod_mongo_data:
+  prod_redis_data:
+  prod_uploads:
+  prod_recordings:
+  prod_logs:

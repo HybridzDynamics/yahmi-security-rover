@@ -105,6 +105,9 @@ const upload = multer({
 
 // MongoDB Connection
 const connectDB = async () => {
+    if (process.env.NODE_ENV === 'test') {
+        return;
+    }
     try {
         const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yahmi_security_rover';
         await mongoose.connect(mongoURI, {
@@ -114,12 +117,16 @@ const connectDB = async () => {
         console.log('✅ MongoDB connected successfully');
     } catch (error) {
         console.error('❌ MongoDB connection failed:', error);
-        process.exit(1);
+        if (process.env.NODE_ENV !== 'test') {
+            process.exit(1);
+        }
     }
 };
 
 // Connect to MongoDB
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+    connectDB();
+}
 
 // Email configuration
 const emailTransporter = nodemailer.createTransport({
@@ -152,6 +159,39 @@ const authenticateToken = (req, res, next) => {
 };
 
 // API Routes
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.status(200).json({
+        status: 'UP',
+        service: 'yahmi-security-rover',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: mongoStatus,
+        version: process.env.npm_package_version || '1.0.0'
+    });
+});
+
+// Alias for /api/health
+app.get('/api/health', (req, res) => {
+    res.redirect('/health');
+});
+
+// System metrics endpoint
+app.get('/metrics', (req, res) => {
+    const memory = process.memoryUsage();
+    res.status(200).json({
+        uptime: process.uptime(),
+        memoryUsage: {
+            rss: `${Math.round(memory.rss / 1024 / 1024)} MB`,
+            heapTotal: `${Math.round(memory.heapTotal / 1024 / 1024)} MB`,
+            heapUsed: `${Math.round(memory.heapUsed / 1024 / 1024)} MB`
+        },
+        cpuUsage: process.cpuUsage(),
+        databaseState: mongoose.connection.readyState
+    });
+});
 
 // Authentication API
 app.post('/api/auth/login', async (req, res) => {
@@ -730,37 +770,39 @@ async function sendSecurityAlert(detection) {
     }
 }
 
-// Scheduled tasks
-cron.schedule('*/5 * * * *', async () => {
-    // Clean up old data every 5 minutes
-    try {
-        const cutoffDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
-        
-        await SystemStatus.deleteMany({ timestamp: { $lt: cutoffDate } });
-        await SensorData.deleteMany({ timestamp: { $lt: cutoffDate } });
-        await AIDetection.deleteMany({ timestamp: { $lt: cutoffDate } });
-        
-        console.log('🧹 Old data cleaned up');
-    } catch (error) {
-        console.error('❌ Data cleanup failed:', error);
-    }
-});
+// Scheduled tasks (only when not running tests)
+if (process.env.NODE_ENV !== 'test') {
+    cron.schedule('*/5 * * * *', async () => {
+        // Clean up old data every 5 minutes
+        try {
+            const cutoffDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+            
+            await SystemStatus.deleteMany({ timestamp: { $lt: cutoffDate } });
+            await SensorData.deleteMany({ timestamp: { $lt: cutoffDate } });
+            await AIDetection.deleteMany({ timestamp: { $lt: cutoffDate } });
+            
+            console.log('🧹 Old data cleaned up');
+        } catch (error) {
+            console.error('❌ Data cleanup failed:', error);
+        }
+    });
 
-cron.schedule('0 */6 * * *', async () => {
-    // System health check every 6 hours
-    try {
-        const healthEvent = new SystemEvent({
-            type: 'health_check',
-            message: 'Automated health check completed',
-            timestamp: new Date()
-        });
-        
-        await healthEvent.save();
-        console.log('💚 System health check completed');
-    } catch (error) {
-        console.error('❌ Health check failed:', error);
-    }
-});
+    cron.schedule('0 */6 * * *', async () => {
+        // System health check every 6 hours
+        try {
+            const healthEvent = new SystemEvent({
+                type: 'health_check',
+                message: 'Automated health check completed',
+                timestamp: new Date()
+            });
+            
+            await healthEvent.save();
+            console.log('💚 System health check completed');
+        } catch (error) {
+            console.error('❌ Health check failed:', error);
+        }
+    });
+}
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -778,11 +820,13 @@ app.use((req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 Yahmi Security Rover server running on port ${PORT}`);
-    console.log(`📊 Dashboard available at http://localhost:${PORT}`);
-    console.log(`🔗 WebSocket server ready for real-time communication`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    server.listen(PORT, () => {
+        console.log(`🚀 Yahmi Security Rover server running on port ${PORT}`);
+        console.log(`📊 Dashboard available at http://localhost:${PORT}`);
+        console.log(`🔗 WebSocket server ready for real-time communication`);
+    });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
@@ -803,4 +847,7 @@ process.on('SIGINT', () => {
     });
 });
 
+app.server = server;
+app.io = io;
+app.connectDB = connectDB;
 module.exports = app;

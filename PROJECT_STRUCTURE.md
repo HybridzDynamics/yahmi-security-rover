@@ -6,12 +6,33 @@ This is a comprehensive Smart Surveillance Car system built with ESP32, featurin
 ## Project Structure
 
 ```
-esp32_surveillance_car/
+yahmi-security-rover/
+├── .github/                            # CI/CD workflows and PR/Issue templates
+│   ├── workflows/ci.yml               # Automated test, lint & audit pipeline
+│   ├── workflows/deploy.yml           # Production Docker build & deploy pipeline
+│   ├── pull_request_template.md       # Standardized PR template
+│   └── ISSUE_TEMPLATE/                # Bug & feature request templates
+├── Dockerfile                          # Production multi-stage Docker container
+├── docker-compose.yml                  # Local development compose configuration
+├── docker-compose.prod.yml             # Production compose stack (with MongoDB & Redis)
+├── scripts/                            # Operational automation scripts
+│   ├── deploy.sh                      # Zero-downtime deployment script
+│   └── health-check.sh                # Uptime & API status probe script
+├── .gitignore                          # Git ignore rules for Node, Python, ESP32, Flutter
+├── .editorconfig                       # Consistent code formatting across editors
+├── .eslintrc.js                        # JavaScript linting rules
+├── .prettierrc.json                    # Code style formatting rules
+├── .env.example                        # Consolidated environment variable template
+├── CHANGELOG.md                        # Semantic version history (v1.0.0)
+├── CODEOWNERS                          # Code ownership definitions
+├── CONTRIBUTING.md                     # Branching strategy & contribution guide
+├── SECURITY.md                         # Security policy & reporting procedures
+├── LICENSE                             # MIT License
 ├── README.md                           # Main project documentation
 ├── PROJECT_STRUCTURE.md               # This file
-├── LICENSE                             # MIT License
 │
 ├── esp32_firmware/                     # ESP32 Arduino C++ code
+│   ├── version.h                      # ESP32 firmware version definition
 │   ├── surveillance_car.ino           # Main Arduino sketch
 │   ├── src/                           # Source code modules
 │   │   ├── main.h                     # Main header file

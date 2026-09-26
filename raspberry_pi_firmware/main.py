@@ -4,6 +4,12 @@ Raspberry Pi Surveillance Car Firmware
 Complete Python implementation for Raspberry Pi control
 """
 
+try:
+    from __version__ import __version__, __build_date__
+except ImportError:
+    __version__ = "1.0.0"
+    __build_date__ = "2026-09-26"
+
 import asyncio
 import json
 import logging

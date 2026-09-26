@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yahmi-rover-dashboard-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongodb:27017/yahmi_security_rover
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=yahmi_dev_secret_jwt_key_2026
+      - JWT_REFRESH_SECRET=yahmi_dev_refresh_secret_key_2026
+    volumes:
+      - ./web_dashboard:/app
+      - /app/node_modules
+      - uploads_data:/app/uploads
+      - recordings_data:/app/recordings
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - yahmi-network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: yahmi-rover-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=yahmi_security_rover
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - yahmi-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: yahmi-rover-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - yahmi-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  yahmi-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
+  uploads_data:
+  recordings_data:

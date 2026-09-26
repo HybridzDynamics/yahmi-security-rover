@@ -1,0 +1,26 @@
+# Code Ownership for Yahmi Security Rover
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @HybridzDynamics/core-team
+
+# Web Dashboard and Backend
+/web_dashboard/ @HybridzDynamics/web-team
+/web_dashboard/server.js @HybridzDynamics/backend-team
+/web_dashboard/models/ @HybridzDynamics/backend-team
+
+# Firmware & Embedded Systems
+/esp32_firmware/ @HybridzDynamics/embedded-team
+/raspberry_pi_firmware/ @HybridzDynamics/robotics-team
+
+# Mobile App
+/flutter_app/ @HybridzDynamics/mobile-team
+
+# CI/CD and DevOps
+/.github/ @HybridzDynamics/devops-team
+/docker-compose*.yml @HybridzDynamics/devops-team
+/Dockerfile @HybridzDynamics/devops-team
+/scripts/ @HybridzDynamics/devops-team
+
+# Documentation
+/docs/ @HybridzDynamics/docs-team
